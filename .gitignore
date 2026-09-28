@@ -7,6 +7,10 @@ backend/.env
 backend/molinos.db
 backend/*.dump
 
+# Datos internos de la empresa (no forman parte del código, solo insumo para
+# el script de siembra de mantenimiento) — no se publican en el repositorio.
+backend/Plan_Mantenimiento_Preventivo_Correctivo_Empacadoras_Enfardadoras.xlsx
+
 # ── Frontend (Angular) ────────────────────────────────────────
 frontend/node_modules/
 frontend/dist/
