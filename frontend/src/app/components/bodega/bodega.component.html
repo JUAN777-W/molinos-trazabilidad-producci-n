@@ -1,0 +1,632 @@
+<div class="min-h-screen bg-gray-100">
+
+  <!-- HEADER -->
+  <header class="bg-brand-blue text-white px-6 py-4 flex justify-between items-center shadow-lg border-b-4 border-brand-red">
+    <div class="flex items-center gap-3">
+      <img src="assets/logo.png" alt="Molinos del Atlántico" class="h-10 w-auto brightness-0 invert">
+      <div>
+        <h1 class="text-lg font-black">Molinos del Atlántico — Bodega de Empaque</h1>
+        <p class="text-xs text-blue-200">Bienvenido, {{ nombreUsuario }}</p>
+      </div>
+    </div>
+    <button (click)="logout()" class="px-4 py-2 bg-brand-red hover:bg-brand-red-dark text-white text-xs font-bold rounded-lg">
+       Cerrar Sesión
+    </button>
+  </header>
+
+  <div class="p-6 max-w-7xl mx-auto">
+
+    <!-- Toast -->
+    <div *ngIf="toast" class="mb-4 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 px-3 py-2 rounded-lg inline-block">
+      {{ toast }}
+    </div>
+
+    <!-- Resumen rápido de alertas (siempre visible arriba) -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+      <div class="bg-white rounded-xl shadow-card border-t-4 border-t-brand-red p-4">
+        <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Cobertura Crítica</div>
+        <div class="text-3xl font-black text-brand-red">{{ totalCriticos }}</div>
+        <div class="text-[10px] text-gray-400 mt-1">referencias &lt; 15 días</div>
+      </div>
+      <div class="bg-white rounded-xl shadow-card border-t-4 border-t-amber-500 p-4">
+        <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Cobertura Baja</div>
+        <div class="text-3xl font-black text-amber-600">{{ totalBajos }}</div>
+        <div class="text-[10px] text-gray-400 mt-1">referencias &lt; 30 días</div>
+      </div>
+      <div class="bg-white rounded-xl shadow-card border-t-4 border-t-brand-blue p-4">
+        <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Pedidos Registrados</div>
+        <div class="text-3xl font-black text-gray-800">{{ pedidos.length }}</div>
+        <div class="text-[10px] text-gray-400 mt-1">ver en Pedidos de Compra</div>
+      </div>
+      <div class="bg-white rounded-xl shadow-card border-t-4 border-t-emerald-500 p-4">
+        <div class="text-[10px] font-bold text-gray-400 uppercase mb-1">Referencias Activas</div>
+        <div class="text-3xl font-black text-gray-800">{{ referenciasEmpaque.length }}</div>
+        <div class="text-[10px] text-gray-400 mt-1">trigo + maíz</div>
+      </div>
+    </div>
+
+    <!-- Sub-navegación -->
+    <div class="flex gap-1 mb-5 border-b border-gray-200">
+      <button *ngFor="let st of [
+        {key:'inventario', label:'Control de Inventario'},
+        {key:'ordenes', label:'Órdenes Recibidas'},
+        {key:'movimientos', label:'Movimientos'},
+        {key:'pedidos', label:'Pedidos de Compra'},
+        {key:'rendimientos', label:'Rendimientos'}
+      ]" (click)="cambiarSubTab(st.key)"
+        [class]="'px-4 py-2 text-xs font-bold rounded-t-lg transition-colors ' +
+        (subTab === st.key ? 'bg-brand-blue text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')">
+        {{ st.label }}
+      </button>
+    </div>
+
+    <!-- ═══ SUB-TAB: CONTROL DE INVENTARIO ═══ -->
+    <div *ngIf="subTab === 'inventario'">
+      <div class="bg-white rounded-xl shadow-card p-5">
+        <div class="flex flex-wrap justify-between items-end gap-3 mb-5">
+          <div>
+            <h3 class="text-sm font-black text-gray-800">Control de Inventario en Tiempo Real</h3>
+            <p class="text-[10px] text-gray-400 mt-1">Saldo actual, consumo promedio y cobertura en días por referencia</p>
+          </div>
+          <div class="flex gap-2 items-end">
+            <select [(ngModel)]="filtroInventarioCategoria" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">Todas las categorías</option>
+              <option value="TRIGO">Trigo</option>
+              <option value="MAIZ">Maíz</option>
+            </select>
+            <button (click)="cargarInventario()" class="px-4 py-2 bg-brand-blue hover:bg-brand-blue-dark text-white text-xs font-bold rounded-lg">
+              Actualizar
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="cargandoInventario" class="text-center py-10 text-gray-400 text-xs animate-pulse">Calculando inventario...</div>
+        <div *ngIf="!cargandoInventario && inventario.length === 0" class="text-center py-10 text-gray-400 text-xs">
+          Sin datos de inventario aún
+        </div>
+
+        <div class="overflow-x-auto" *ngIf="!cargandoInventario && inventario.length > 0">
+          <table class="w-full text-[11px]">
+            <thead>
+              <tr class="bg-gray-50">
+                <th class="px-3 py-2 text-left font-bold text-gray-500">CÓDIGO</th>
+                <th class="px-3 py-2 text-left font-bold text-gray-500">DESCRIPCIÓN</th>
+                <th class="px-3 py-2 text-right font-bold text-gray-500">SALDO KG</th>
+                <th class="px-3 py-2 text-right font-bold text-gray-500">BOBINAS</th>
+                <th class="px-3 py-2 text-right font-bold text-gray-500">CONSUMO PROM./MES</th>
+                <th class="px-3 py-2 text-right font-bold text-gray-500">COBERTURA (DÍAS)</th>
+                <th class="px-3 py-2 text-center font-bold text-gray-500">ESTADO</th>
+                <th class="px-3 py-2 text-right font-bold text-gray-500">PEDIDOS PEND.</th>
+                <th class="px-3 py-2 text-left font-bold text-gray-500">PRÓX. ENTREGA</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let i of inventario" class="border-b border-gray-100"
+                [class.bg-red-50]="i.estado_cobertura === 'CRITICO'">
+                <td class="px-3 py-2 font-mono text-brand-blue font-bold">{{ i.codigo }}</td>
+                <td class="px-3 py-2">{{ i.descripcion }}</td>
+                <td class="px-3 py-2 text-right font-bold">{{ i.saldo_kg | number:'1.0-0' }}</td>
+                <td class="px-3 py-2 text-right">{{ i.saldo_bobinas }}</td>
+                <td class="px-3 py-2 text-right">{{ i.consumo_promedio_mensual_kg | number:'1.0-0' }}</td>
+                <td class="px-3 py-2 text-right font-bold">{{ i.cobertura_dias ?? '—' }}</td>
+                <td class="px-3 py-2 text-center">
+                  <span [class]="'text-[9px] font-bold px-2 py-0.5 rounded-full ' + coberturaColor(i.estado_cobertura)">
+                    {{ coberturaLabel(i.estado_cobertura) }}
+                  </span>
+                </td>
+                <td class="px-3 py-2 text-right">{{ i.pedidos_pendientes_kg | number:'1.0-0' }}</td>
+                <td class="px-3 py-2">{{ i.proxima_entrega_fecha || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SUB-TAB: ÓRDENES DE SALIDA RECIBIDAS (solo lectura) + Reconciliación ═══ -->
+    <div *ngIf="subTab === 'ordenes'">
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+
+        <!-- Listado de órdenes recibidas -->
+        <div class="bg-white rounded-xl shadow-card p-5">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-sm font-black text-gray-800">Órdenes de Salida Recibidas</h3>
+            <div class="flex gap-2 items-center">
+              <input type="date" [(ngModel)]="filtroOrdenesFecha" class="border border-gray-300 rounded-lg px-2 py-1 text-xs">
+              <button (click)="cargarOrdenesBodega()" class="text-[10px] font-bold text-brand-blue hover:underline">Actualizar</button>
+            </div>
+          </div>
+
+          <div *ngIf="cargandoOrdenesBodega" class="text-center py-8 text-gray-400 text-xs animate-pulse">Cargando...</div>
+          <div *ngIf="!cargandoOrdenesBodega && ordenesBodega.length === 0" class="text-center py-8 text-gray-400 text-xs">
+            Sin órdenes para esta fecha
+          </div>
+
+          <div class="overflow-y-auto max-h-96" *ngIf="!cargandoOrdenesBodega && ordenesBodega.length > 0">
+            <div *ngFor="let o of ordenesBodega" class="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0">
+              <span [class]="'text-[10px] font-bold px-1.5 py-0.5 rounded ' + turnoColor(o.turno)">{{ o.turno }}</span>
+              <div class="flex-1 min-w-0">
+                <div class="text-xs font-bold text-gray-800 truncate">{{ o.referencia_producto }}</div>
+                <div class="text-[10px] text-gray-400">{{ o.area_solicitante }} · {{ o.nombre_operario }}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-xs font-black text-brand-blue">{{ o.cantidad_kg | number:'1.1-1' }} kg</div>
+                <div class="text-[10px] text-gray-400">{{ o.cantidad_bobinas }} bobinas</div>
+              </div>
+              <button (click)="imprimirOrdenSalida(o)"
+                class="px-2.5 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 text-[10px] font-bold flex-shrink-0">
+                Imprimir
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reconciliación -->
+        <div class="bg-white rounded-xl shadow-card p-5">
+          <div class="flex flex-wrap justify-between items-end gap-3 mb-4">
+            <h3 class="text-sm font-black text-gray-800">Reconciliación — Pedido vs. Consumo Real</h3>
+            <div class="flex gap-2 items-end">
+              <input type="date" [(ngModel)]="filtroReconciliacionFecha" class="border border-gray-300 rounded-lg px-2 py-1 text-xs">
+              <button (click)="cargarReconciliacion()" class="px-3 py-1.5 bg-brand-blue hover:bg-brand-blue-dark text-white text-[10px] font-bold rounded-lg">
+                Ver
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="cargandoReconciliacion" class="text-center py-8 text-gray-400 text-xs animate-pulse">Calculando...</div>
+
+          <div *ngIf="!cargandoReconciliacion && reconciliacion">
+            <div class="grid grid-cols-3 gap-2 mb-4">
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
+                <div class="text-sm font-black text-brand-blue">{{ reconciliacion.total_kg_pedido | number:'1.0-0' }}</div>
+                <div class="text-[9px] font-bold text-brand-blue uppercase">Pedido Kg</div>
+              </div>
+              <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-center">
+                <div class="text-sm font-black text-emerald-700">{{ reconciliacion.total_kg_consumido | number:'1.0-0' }}</div>
+                <div class="text-[9px] font-bold text-emerald-600 uppercase">Consumido Kg</div>
+              </div>
+              <div [class]="'border rounded-lg p-2 text-center ' + (reconciliacion.diferencia_total_kg > 0 ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200')">
+                <div [class]="'text-sm font-black ' + (reconciliacion.diferencia_total_kg > 0 ? 'text-brand-red' : 'text-gray-700')">
+                  {{ reconciliacion.diferencia_total_kg | number:'1.0-0' }}
+                </div>
+                <div class="text-[9px] font-bold uppercase" [class]="reconciliacion.diferencia_total_kg > 0 ? 'text-brand-red' : 'text-gray-500'">Diferencia</div>
+              </div>
+            </div>
+
+            <div class="overflow-y-auto max-h-64" *ngIf="reconciliacion.items.length > 0">
+              <table class="w-full text-[10px]">
+                <thead>
+                  <tr class="bg-gray-50">
+                    <th class="px-2 py-1.5 text-left font-bold text-gray-500">REF.</th>
+                    <th class="px-2 py-1.5 text-right font-bold text-gray-500">PEDIDO</th>
+                    <th class="px-2 py-1.5 text-right font-bold text-gray-500">REAL</th>
+                    <th class="px-2 py-1.5 text-center font-bold text-gray-500">ESTADO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let it of reconciliacion.items" class="border-b border-gray-100">
+                    <td class="px-2 py-1.5">{{ it.referencia_producto }}</td>
+                    <td class="px-2 py-1.5 text-right">{{ it.kg_pedido | number:'1.0-0' }}</td>
+                    <td class="px-2 py-1.5 text-right">{{ it.kg_consumido_real | number:'1.0-0' }}</td>
+                    <td class="px-2 py-1.5 text-center">
+                      <span [class]="'text-[9px] font-bold px-1.5 py-0.5 rounded-full ' + estadoReconciliacionColor(it.estado)">
+                        {{ estadoReconciliacionLabel(it.estado) }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div *ngIf="reconciliacion.items.length === 0" class="text-center py-6 text-gray-400 text-xs">
+              Sin órdenes para esta fecha
+            </div>
+          </div>
+
+          <div *ngIf="!cargandoReconciliacion && !reconciliacion" class="text-center py-8 text-gray-400 text-xs">
+            Selecciona una fecha y presiona "Ver"
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ SUB-TAB: MOVIMIENTOS DE INVENTARIO ═══ -->
+    <div *ngIf="subTab === 'movimientos'">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+        <div class="bg-white rounded-xl shadow-card p-5">
+          <h3 class="text-sm font-black text-gray-800 mb-4">Registrar Movimiento</h3>
+
+          <div class="mb-3">
+            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Tipo de Operación</label>
+            <select [(ngModel)]="formMovimiento.tipo_operacion" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">-- Seleccionar --</option>
+              <option *ngFor="let t of tiposMovimiento" [value]="t.value">{{ t.label }}</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Fecha</label>
+              <input type="date" [(ngModel)]="formMovimiento.fecha" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">N° Documento</label>
+              <input type="text" [(ngModel)]="formMovimiento.n_documento" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Referencia de Producto</label>
+            <input type="text" [(ngModel)]="filtroRefMovimiento" placeholder="Buscar por código o nombre..."
+              class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs mb-1.5">
+            <select [ngModel]="formMovimiento.codigo_producto" (ngModelChange)="seleccionarReferenciaMovimiento($event)"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">-- Seleccionar --</option>
+              <option *ngFor="let r of filtrarReferencias(filtroRefMovimiento)" [value]="r.codigo">{{ r.codigo }} — {{ r.descripcion }}</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Kilogramos</label>
+              <input type="number" step="0.1" [(ngModel)]="formMovimiento.cantidad_kg" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Bobinas</label>
+              <input type="number" [(ngModel)]="formMovimiento.cantidad_bobinas" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Proveedor</label>
+              <input type="text" [(ngModel)]="formMovimiento.proveedor" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Destino</label>
+              <input type="text" [(ngModel)]="formMovimiento.destino" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Observaciones</label>
+            <textarea [(ngModel)]="formMovimiento.observaciones" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+          </div>
+
+          <button (click)="guardarMovimiento()" [disabled]="guardandoMovimiento"
+            class="w-full px-4 py-2.5 bg-brand-blue hover:bg-brand-blue-dark text-white text-sm font-bold rounded-lg shadow-card disabled:opacity-50">
+            {{ guardandoMovimiento ? 'Guardando...': 'Registrar Movimiento'}}
+          </button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-card p-5">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-sm font-black text-gray-800">Movimientos Recientes</h3>
+            <div class="flex gap-2 items-center">
+              <input type="date" [(ngModel)]="filtroMovimientoFecha" class="border border-gray-300 rounded-lg px-2 py-1 text-xs">
+              <button (click)="cargarMovimientos()" class="text-[10px] font-bold text-brand-blue hover:underline">Actualizar</button>
+            </div>
+          </div>
+
+          <div *ngIf="cargandoMovimientos" class="text-center py-8 text-gray-400 text-xs animate-pulse">Cargando...</div>
+          <div *ngIf="!cargandoMovimientos && movimientos.length === 0" class="text-center py-8 text-gray-400 text-xs">
+            No hay movimientos registrados
+          </div>
+
+          <div class="overflow-y-auto max-h-96" *ngIf="!cargandoMovimientos && movimientos.length > 0">
+            <div *ngFor="let m of movimientos" class="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0">
+              <span [class]="'text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap ' + tipoMovimientoColor(m.tipo_operacion)">
+                {{ tipoMovimientoLabel(m.tipo_operacion) }}
+              </span>
+              <div class="flex-1 min-w-0">
+                <div class="text-xs font-bold text-gray-800 truncate">{{ m.referencia_producto }}</div>
+                <div class="text-[10px] text-gray-400">{{ m.fecha }} · {{ m.nombre_usuario }}</div>
+              </div>
+              <div [class]="'text-xs font-black ' + (m.cantidad_kg >= 0 ? 'text-emerald-600' : 'text-brand-red')">
+                {{ m.cantidad_kg >= 0 ? '+' : '' }}{{ m.cantidad_kg | number:'1.1-1' }} kg
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ SUB-TAB: PEDIDOS DE COMPRA ═══ -->
+    <div *ngIf="subTab === 'pedidos'">
+
+      <div *ngIf="pedidoRecepcion" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+          <h3 class="text-sm font-black text-gray-800 mb-1">Registrar Recepción</h3>
+          <p class="text-xs text-gray-400 mb-4">{{ pedidoRecepcion.referencia_producto }}</p>
+          <div class="mb-4">
+            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Kg Recibidos</label>
+            <input type="number" step="0.1" [(ngModel)]="formRecepcionKg" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <div class="text-[10px] text-gray-400 mt-1">
+              Pendiente: {{ (pedidoRecepcion.cantidad_pedida_kg - pedidoRecepcion.cantidad_recibida_kg) | number:'1.1-1' }} kg
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button (click)="guardarRecepcion()" [disabled]="guardandoRecepcion"
+              class="flex-1 px-4 py-2 bg-brand-blue hover:bg-brand-blue-dark text-white text-xs font-bold rounded-lg disabled:opacity-50">
+              {{ guardandoRecepcion ? 'Guardando...': 'Confirmar Recepción'}}
+            </button>
+            <button (click)="cerrarRecepcion()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-lg">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+        <div class="bg-white rounded-xl shadow-card p-5">
+          <h3 class="text-sm font-black text-gray-800 mb-4">Nuevo Pedido de Compra</h3>
+
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">N° Orden de Compra</label>
+              <input type="text" [(ngModel)]="formPedido.numero_orden_compra" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Fecha</label>
+              <input type="date" [(ngModel)]="formPedido.fecha" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Proveedor</label>
+            <input type="text" [(ngModel)]="formPedido.proveedor" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          </div>
+
+          <div class="mb-3">
+            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Referencia de Producto</label>
+            <input type="text" [(ngModel)]="filtroRefPedido" placeholder="Buscar por código o nombre..."
+              class="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-xs mb-1.5">
+            <select [ngModel]="formPedido.codigo_producto" (ngModelChange)="seleccionarReferenciaPedido($event)"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">-- Seleccionar --</option>
+              <option *ngFor="let r of filtrarReferencias(filtroRefPedido)" [value]="r.codigo">{{ r.codigo }} — {{ r.descripcion }}</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Cantidad Pedida (kg)</label>
+              <input type="number" step="0.1" [(ngModel)]="formPedido.cantidad_pedida_kg" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Fecha Estimada</label>
+              <input type="date" [(ngModel)]="formPedido.fecha_estimada" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Precio Unitario</label>
+            <input type="number" step="0.01" [(ngModel)]="formPedido.precio_unitario" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          </div>
+
+          <div class="mb-4">
+            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Observaciones</label>
+            <textarea [(ngModel)]="formPedido.observaciones" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+          </div>
+
+          <button (click)="guardarPedido()" [disabled]="guardandoPedido"
+            class="w-full px-4 py-2.5 bg-brand-blue hover:bg-brand-blue-dark text-white text-sm font-bold rounded-lg shadow-card disabled:opacity-50">
+            {{ guardandoPedido ? 'Guardando...': 'Registrar Pedido'}}
+          </button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-card p-5">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-sm font-black text-gray-800">Pedidos Registrados</h3>
+            <button (click)="cargarPedidos()" class="text-[10px] font-bold text-brand-blue hover:underline">Actualizar</button>
+          </div>
+
+          <div *ngIf="cargandoPedidos" class="text-center py-8 text-gray-400 text-xs animate-pulse">Cargando...</div>
+          <div *ngIf="!cargandoPedidos && pedidos.length === 0" class="text-center py-8 text-gray-400 text-xs">
+            No hay pedidos registrados
+          </div>
+
+          <div class="overflow-y-auto max-h-96" *ngIf="!cargandoPedidos && pedidos.length > 0">
+            <div *ngFor="let p of pedidos" class="py-2.5 border-b border-gray-100 last:border-0">
+              <div class="flex justify-between items-start mb-1">
+                <div class="text-xs font-bold text-gray-800">{{ p.referencia_producto }}</div>
+                <span [class]="'text-[9px] font-bold px-2 py-0.5 rounded-full ' + estadoPedidoColor(p.estado)">{{ p.estado }}</span>
+              </div>
+              <div class="text-[10px] text-gray-400 mb-1">{{ p.proveedor }} · {{ p.fecha }}</div>
+              <div class="flex justify-between items-center">
+                <div class="text-[10px] text-gray-500">
+                  {{ p.cantidad_recibida_kg | number:'1.0-0' }} / {{ p.cantidad_pedida_kg | number:'1.0-0' }} kg recibidos
+                </div>
+                <button *ngIf="p.estado !== 'COMPLETO'" (click)="abrirRecepcion(p)"
+                  class="px-2 py-1 bg-brand-blue hover:bg-brand-blue-dark text-white text-[10px] font-bold rounded">
+                  Registrar Recepción
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ SUB-TAB: RENDIMIENTOS MENSUALES ═══ -->
+    <div *ngIf="subTab === 'rendimientos'">
+      <div class="bg-white rounded-xl shadow-card p-5">
+        <div class="flex flex-wrap justify-between items-end gap-3 mb-5">
+          <div>
+            <h3 class="text-sm font-black text-gray-800">Informe de Rendimientos Mensual</h3>
+            <p class="text-[10px] text-gray-400 mt-1">Kg consumidos, unidades producidas y % de desperdicio por referencia</p>
+          </div>
+          <div class="flex gap-2 items-end">
+            <input type="month" [(ngModel)]="filtroRendimientoMes" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <button (click)="cargarRendimiento()" class="px-4 py-2 bg-brand-blue hover:bg-brand-blue-dark text-white text-xs font-bold rounded-lg">
+              Ver Informe
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="cargandoRendimiento" class="text-center py-10 text-gray-400 text-xs animate-pulse">Calculando...</div>
+
+        <div *ngIf="!cargandoRendimiento && rendimiento">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+              <div class="text-xl font-black text-brand-blue">{{ rendimiento.total_kg_consumido | number:'1.0-0' }} kg</div>
+              <div class="text-[10px] font-bold text-brand-blue uppercase">Total Consumido</div>
+            </div>
+            <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
+              <div class="text-xl font-black text-emerald-700">{{ rendimiento.total_unidades_producidas | number }}</div>
+              <div class="text-[10px] font-bold text-emerald-600 uppercase">Unidades Producidas</div>
+            </div>
+            <div class="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+              <div class="text-xl font-black text-brand-red">{{ rendimiento.pct_desperdicio_promedio | number:'1.1-1' }}%</div>
+              <div class="text-[10px] font-bold text-brand-red uppercase">% Desperdicio</div>
+            </div>
+            <div [class]="'border rounded-xl p-3 text-center ' + (rendimiento.variacion_kg_vs_mes_anterior_pct > 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200')">
+              <div [class]="'text-xl font-black ' + (rendimiento.variacion_kg_vs_mes_anterior_pct > 0 ? 'text-brand-red' : 'text-emerald-700')">
+                {{ rendimiento.variacion_kg_vs_mes_anterior_pct > 0 ? '+' : '' }}{{ rendimiento.variacion_kg_vs_mes_anterior_pct | number:'1.1-1' }}%
+              </div>
+              <div class="text-[10px] font-bold uppercase" [class]="rendimiento.variacion_kg_vs_mes_anterior_pct > 0 ? 'text-brand-red' : 'text-emerald-600'">
+                vs. Mes Anterior
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="rendimiento.items.length === 0" class="text-center py-8 text-gray-400 text-xs">
+            Sin datos de producción para este mes
+          </div>
+
+          <div class="overflow-x-auto" *ngIf="rendimiento.items.length > 0">
+            <table class="w-full text-[11px]">
+              <thead>
+                <tr class="bg-gray-50">
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">REFERENCIA</th>
+                  <th class="px-3 py-2 text-right font-bold text-gray-500">KG CONSUMIDO</th>
+                  <th class="px-3 py-2 text-right font-bold text-gray-500">UNIDADES</th>
+                  <th class="px-3 py-2 text-right font-bold text-gray-500">REND. (UNID/KG)</th>
+                  <th class="px-3 py-2 text-right font-bold text-gray-500">DESPERDICIO KG</th>
+                  <th class="px-3 py-2 text-right font-bold text-gray-500">% DESP.</th>
+                  <th class="px-3 py-2 text-right font-bold text-gray-500">TURNOS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let it of rendimiento.items" class="border-b border-gray-100">
+                  <td class="px-3 py-2 font-semibold">{{ it.referencia_producto }}</td>
+                  <td class="px-3 py-2 text-right">{{ it.kg_consumido | number:'1.0-0' }}</td>
+                  <td class="px-3 py-2 text-right">{{ it.unidades_producidas | number }}</td>
+                  <td class="px-3 py-2 text-right font-bold text-brand-blue">{{ it.rendimiento_unid_por_kg }}</td>
+                  <td class="px-3 py-2 text-right">{{ it.desperdicio_kg | number:'1.1-1' }}</td>
+                  <td class="px-3 py-2 text-right font-bold"
+                    [class]="it.pct_desperdicio > 5 ? 'text-brand-red' : 'text-emerald-600'">
+                    {{ it.pct_desperdicio }}%
+                  </td>
+                  <td class="px-3 py-2 text-right">{{ it.turnos }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div *ngIf="!cargandoRendimiento && !rendimiento" class="text-center py-10 text-gray-400 text-xs">
+          Selecciona un mes y presiona "Ver Informe"
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal imprimible: Orden de Salida -->
+    <div *ngIf="mostrandoImprimirOrden && ordenParaImprimir"
+      class="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-4">
+
+        <div class="no-print flex justify-between items-center px-6 py-4 border-b border-gray-200 bg-brand-blue rounded-t-2xl">
+          <div class="text-white font-black text-base">Vista previa — Orden de Salida</div>
+          <div class="flex gap-2">
+            <button (click)="ejecutarImpresion()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg">
+               Imprimir
+            </button>
+            <button (click)="cerrarImprimirOrden()" class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-lg">
+              ✕ Cerrar
+            </button>
+          </div>
+        </div>
+
+        <div id="ordenPrintArea" class="p-6">
+          <div class="border-2 border-gray-800 rounded-md overflow-hidden">
+            <div class="flex justify-between items-stretch border-b-2 border-gray-800">
+              <div class="p-3 flex-1">
+                <div class="text-lg font-black text-gray-900">Molinos del Atlántico S.A.S.</div>
+                <div class="text-[10px] text-gray-700">NIT: 802.001.105-9</div>
+                <div class="text-[10px] text-gray-700">VIA 40 No. 62-174 PBX: 3443088 FAX: 3689191 A.A. 2320</div>
+                <div class="text-[10px] text-gray-700">BARRANQUILLA - COLOMBIA</div>
+              </div>
+              <div class="p-3 border-l-2 border-gray-800 flex flex-col items-center justify-center min-w-[160px]">
+                <div class="text-xs font-black uppercase text-gray-800">Orden de Salida</div>
+                <div class="text-xl font-black text-brand-red mt-1">{{ numeroOrdenFormateado(ordenParaImprimir) }}</div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 border-b-2 border-gray-800 text-xs">
+              <div class="p-2 border-r-2 border-gray-800">
+                <span class="font-bold">BARRANQUILLA, </span>{{ ordenParaImprimir.fecha }}
+              </div>
+              <div class="p-2">
+                <span class="font-bold">ÁREA / PERSONA AUTORIZADA: </span>
+                {{ ordenParaImprimir.area_solicitante }} — {{ ordenParaImprimir.nombre_operario }}
+              </div>
+            </div>
+
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="border-b-2 border-gray-800">
+                  <th class="p-2 border-r-2 border-gray-800 w-24">CANT. BOBINAS</th>
+                  <th class="p-2 border-r-2 border-gray-800 w-28">KILOGRAMOS</th>
+                  <th class="p-2 text-left">DESCRIPCIÓN</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-b border-gray-300">
+                  <td class="p-2 border-r-2 border-gray-800 text-center">{{ ordenParaImprimir.cantidad_bobinas }}</td>
+                  <td class="p-2 border-r-2 border-gray-800 text-center">{{ ordenParaImprimir.cantidad_kg | number:'1.1-1' }}</td>
+                  <td class="p-2">
+                    <span *ngIf="ordenParaImprimir.codigo_producto" class="font-mono text-[10px] text-gray-500 mr-1">
+                      [{{ ordenParaImprimir.codigo_producto }}]
+                    </span>
+                    {{ ordenParaImprimir.referencia_producto }}
+                  </td>
+                </tr>
+                <tr *ngFor="let n of [1,2,3,4]" class="border-b border-gray-300">
+                  <td class="p-2 border-r-2 border-gray-800 h-6"></td>
+                  <td class="p-2 border-r-2 border-gray-800"></td>
+                  <td class="p-2"></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="p-2 border-t-2 border-gray-800 text-xs min-h-[40px]">
+              <span class="font-bold">OBSERVACIONES: </span>{{ ordenParaImprimir.observaciones }}
+            </div>
+
+            <div class="grid grid-cols-2 border-t-2 border-gray-800 text-xs">
+              <div class="p-3 border-r-2 border-gray-800">
+                <div class="font-bold mb-4">ELABORADO POR</div>
+                <div class="border-t border-gray-500 pt-1">{{ ordenParaImprimir.nombre_operario }}</div>
+              </div>
+              <div class="p-3">
+                <div class="font-bold mb-4">APROBADO POR</div>
+                <div class="border-t border-gray-500 pt-1">&nbsp;</div>
+              </div>
+            </div>
+          </div>
+          <div class="text-center text-[9px] text-gray-400 mt-2">
+            Documento generado digitalmente — Molinos del Atlántico S.A.S. — La Nieve
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,503 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Iconos (Material Symbols Outlined) — uso: <span class="material-symbols-outlined">nombre_icono</span> ── */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Inputs DENTRO DE TABLAS (planillas por hora) — con borde visible para
+   que se note que son campos para escribir (importante en tablet, donde no
+   hay cursor de mouse que lo delate al pasar por encima). OJO: escrito a
+   propósito solo dentro de .table-print — si se quita ese prefijo, estas
+   reglas se cuelan sobre los campos de encabezado (Fecha/Máquina/Turno/etc.)
+   y les pisan el diseño (bordes y esquinas quedan inconsistentes). ── */
+.table-print input[type="number"],
+.table-print input[type="text"],
+.table-print input[type="date"],
+.table-print select {
+  background-color: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 0.92rem;
+  outline: none;
+  width: 100%;
+  height: 100%;
+}
+.table-print input:focus,
+.table-print select:focus {
+  background-color: #f3f4f6;
+  border-color: #3b82f6;
+}
+/* Safari en iPad hace zoom automático de toda la página al enfocar un campo
+   con letra menor a 16px — subimos el tamaño solo mientras se escribe. */
+.table-print input[type="number"]:focus,
+.table-print input[type="text"]:focus {
+  font-size: 16px;
+}
+
+/* ── Tabla estilo planilla ──
+   En pantalla usa un borde gris claro (look "Industrial Clarity"); al imprimir
+   se fuerza un borde negro nítido, porque el PDF/impreso es un documento físico
+   de control de calidad y necesita verse como un formato oficial, no como una
+   tarjeta de pantalla. */
+.table-print th,
+.table-print td {
+  border: 1px solid #CBD5E1;
+  padding: 5px;
+  text-align: center;
+  height: 34px;
+}
+@media print {
+  .table-print th,
+  .table-print td {
+    border-color: #1f2937 !important;
+  }
+}
+/* En pantalla (no al imprimir) las filas quedan un poco más altas — en
+   tableta hay que poder tocar cada casilla con el dedo sin equivocarse de fila. */
+@media screen {
+  .table-print th,
+  .table-print td {
+    height: 42px;
+  }
+}
+
+/* ── Celdas de muestras (Control de Peso) — angostas, sin el padding general ── */
+.table-print td.muestra-cell {
+  padding: 1px;
+}
+.peso-input {
+  font-size: 0.78rem;
+  padding: 0 2px;
+}
+@media screen {
+  .peso-input {
+    font-size: 0.85rem;
+    padding: 6px 2px;
+  }
+}
+
+/* ── Primera columna fija (HORA) en las tablas anchas de muestras, para no
+   perder de vista a qué hora corresponde la fila al deslizar hacia los lados ── */
+.columna-fija {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+/* ── Semáforo selects ── */
+select.verde {
+  background-color: #6CF8BB !important;
+  color: #00512E !important;
+  font-weight: 800;
+}
+select.rojo {
+  background-color: #FFDAD6 !important;
+  color: #93000A !important;
+  font-weight: 800;
+}
+
+/* ── Firma digital ── */
+.sig-wrap {
+  position: relative;
+  height: 80px;
+  border: 2px solid #3b82f6;
+  border-radius: 4px;
+  background: #fff;
+}
+.sig-wrap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* ── Input nombre operario ── */
+.nombre-op-input {
+  background-color: #fff !important;
+  text-align: left !important;
+  border: 1px solid #9ca3af;
+  border-radius: 4px;
+  padding: 4px 8px;
+  height: 36px;
+}
+.nombre-op-input:focus {
+  background-color: #f3f4f6 !important;
+}
+
+/* ── Claridad de botones: toda acción clickeable (menos los enlaces de texto)
+   se ve como un botón real — sombra, borde sólido y un ligero "presionado" al
+   tocar — para que el operario no confunda un botón con una celda o etiqueta. ── */
+.no-print button:not(.semaforo),
+.no-print a.boton {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.08);
+  border-width: 1.5px !important;
+  transition: transform 0.05s ease, box-shadow 0.05s ease;
+}
+.no-print button:not(.semaforo):active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 1px rgba(0,0,0,0.12);
+}
+
+/* Botones "+ Agregar fila": antes eran una barra angosta con borde punteado
+   apenas visible — ahora tienen más alto, un ícono más claro y sombra, para
+   que se noten como botón y no como un separador de la tabla. */
+.boton-agregar-fila {
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+  font-size: 0.8rem !important;
+  border-width: 2px !important;
+  border-style: dashed !important;
+}
+/* Mismo color en las 3 secciones (Empacadora A, B, Enfardadora) — es siempre
+   la misma acción (agregar fila), así que se ve siempre igual sin importar
+   en qué sección esté, para no confundir al operario. */
+.boton-agregar-fila-uniforme {
+  color: #1d4ed8;
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+.boton-agregar-fila-uniforme:hover {
+  background: #dbeafe;
+}
+
+/* Franja a la izquierda de cada sección de la tabla (Empacadora A/B,
+   Enfardadora), para identificar de un vistazo a qué máquina pertenece cada
+   fila sin tener que leer la columna "MAQ. #". Un solo color — el nombre de
+   la sección (encabezado de cada bloque) es lo que distingue una de otra. */
+.seccion-azul td:first-child,
+.seccion-dorada td:first-child,
+.seccion-gris td:first-child {
+  border-left: 3px solid #203060;
+}
+
+/* Celdas de solo lectura (no se escriben, se calculan solas) — fondo gris con
+   un candado chiquito, para diferenciarlas claramente de las que sí se llenan. */
+.celda-calculada {
+  position: relative;
+}
+.celda-calculada::after {
+  content: "🔒";
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-size: 7px;
+  opacity: 0.5;
+}
+
+/* Botón de eliminar fila (✕): antes era solo texto rojo suelto — ahora es un
+   círculo con borde, para que se vea como botón y no como un símbolo de error. */
+.boton-eliminar-fila {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1.5px solid #D02020;
+  color: #D02020;
+  background: #fff;
+  font-weight: 700;
+  line-height: 1;
+}
+.boton-eliminar-fila:active {
+  background: #fef2f2;
+}
+
+/* ── Impresión ── */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+    padding: 0 !important;
+  }
+  input,
+  select {
+    border: none !important;
+    color: #111 !important;
+  }
+  select.verde {
+    background-color: #d1fae5 !important;
+    color: #065f46 !important;
+  }
+  select.rojo {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+  }
+  .sig-wrap {
+    border: 1.5px solid #374151 !important;
+  }
+}
+@page {
+  margin: 10mm;
+}
+
+/* ── Informe de Turno (documento profesional) ── */
+.informe-documento {
+  color: #1f2937;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+.informe-tabla-datos td {
+  padding: 4px 8px;
+  vertical-align: baseline;
+}
+.informe-etiqueta {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: #6b7280;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  width: 1%;
+}
+.informe-valor {
+  color: #111827;
+  font-weight: 700;
+}
+.informe-titulo-seccion {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+.informe-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.informe-stat {
+  padding: 12px 8px;
+  text-align: center;
+  border-right: 1px solid #e5e7eb;
+}
+.informe-stat:last-child {
+  border-right: none;
+}
+.informe-stat-valor {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 20px;
+  font-weight: 800;
+  color: #1e293b;
+  font-variant-numeric: tabular-nums;
+}
+.informe-stat-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+.informe-mal {
+  color: #b91c1c !important;
+}
+.informe-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.informe-tabla thead th {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  background: #f1f5f9;
+  color: #6b7280;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 6px 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.informe-tabla tbody td {
+  padding: 6px 10px;
+  border-bottom: 1px solid #f3f4f6;
+  font-variant-numeric: tabular-nums;
+}
+.informe-tabla tbody tr:last-child td {
+  border-bottom: none;
+}
+.informe-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+.informe-badge-mal {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+.informe-barra {
+  width: 100%;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.informe-barra-relleno {
+  height: 100%;
+  background: #1e293b;
+  border-radius: 999px;
+}
+.informe-barra-relleno.informe-barra-mal {
+  background: #b91c1c;
+}
+@media print {
+  .informe-documento {
+    box-shadow: none !important;
+  }
+  .informe-stats,
+  .informe-tabla {
+    border-color: #d1d5db !important;
+  }
+}
+
+/* ── Login ── */
+.login-fondo {
+  background: linear-gradient(135deg, #24345E 0%, #141F42 100%);
+}
+.login-panel-izq {
+  background: linear-gradient(160deg, #2B3E6E 0%, #141F42 100%);
+}
+.login-logo-badge {
+  width: 112px;
+  height: 112px;
+  border-radius: 999px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+.login-titulo {
+  font-weight: 700;
+  font-size: 1.35rem;
+  color: #fff;
+  letter-spacing: 0.02em;
+  margin-top: 0.5rem;
+}
+.login-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.login-input-icon {
+  position: absolute;
+  left: 12px;
+  width: 18px;
+  height: 18px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+input.login-input {
+  width: 100%;
+  background-color: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0.7rem 0.9rem 0.7rem 2.4rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  height: auto;
+  text-align: left;
+}
+input.login-input:focus {
+  outline: none;
+  border-color: #0B3D91;
+  box-shadow: 0 0 0 3px rgba(11, 61, 145, 0.12);
+  background-color: #fff;
+}
+.login-toggle-ojo {
+  position: absolute;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  color: #9ca3af;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.login-toggle-ojo:hover {
+  color: #6b7280;
+}
+.login-toggle-ojo svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Resumen de Mantenimiento (franja de indicadores) ── */
+.mtto-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+@media (min-width: 768px) {
+  .mtto-stats {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+.mtto-stat {
+  padding: 14px 10px;
+  text-align: center;
+  border-right: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+@media (min-width: 768px) {
+  .mtto-stat {
+    border-bottom: none;
+  }
+  .mtto-stat:last-child {
+    border-right: none;
+  }
+}
+.mtto-stat-valor {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 22px;
+  font-weight: 800;
+  color: #1e293b;
+  font-variant-numeric: tabular-nums;
+}
+.mtto-stat-label {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}

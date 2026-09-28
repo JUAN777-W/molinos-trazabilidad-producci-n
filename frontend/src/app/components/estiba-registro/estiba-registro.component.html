@@ -1,0 +1,105 @@
+<div class="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+  <div class="w-full max-w-md">
+
+    <!-- Encabezado -->
+    <div class="text-center mb-5">
+      <img src="assets/logo.png" alt="Molinos del Atlántico" class="h-16 w-auto mx-auto mb-2">
+      <h1 class="text-lg font-black text-brand-blue">Registro de Estiba</h1>
+      <p class="text-xs text-gray-400">Molinos del Atlántico — La Nieve</p>
+    </div>
+
+    <!-- Error: QR sin máquina -->
+    <div *ngIf="errorMaquina" class="bg-red-50 border-2 border-brand-red rounded-xl p-5 text-center">
+      <div class="text-sm font-black text-brand-red mb-1">Código QR inválido</div>
+      <div class="text-xs text-red-700">Este QR no identifica ninguna máquina. Avisa al encargado de bodega.</div>
+    </div>
+
+    <!-- Formulario -->
+    <div *ngIf="!errorMaquina && !enviado" class="bg-white rounded-2xl shadow-lg p-5">
+
+      <!-- Máquina (fija, viene del QR) -->
+      <div class="bg-brand-blue-50 border border-brand-blue/30 rounded-xl p-3 mb-4 text-center">
+        <div class="text-[10px] font-bold text-brand-blue uppercase">Máquina</div>
+        <div class="text-2xl font-black text-brand-blue">{{ maquina }}</div>
+      </div>
+
+      <!-- Turno -->
+      <div class="mb-4">
+        <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Turno</label>
+        <select [(ngModel)]="turno" (ngModelChange)="onTurnoChange()"
+          class="w-full border border-gray-300 rounded-xl px-4 py-3 text-base">
+          <option value="">-- Selecciona tu turno --</option>
+          <option *ngFor="let t of turnos" [value]="t.key">{{ t.label }}</option>
+        </select>
+      </div>
+
+      <div *ngIf="cargandoInfo" class="text-center py-4 text-gray-400 text-sm animate-pulse">
+        Consultando referencia de la máquina...
+      </div>
+
+      <ng-container *ngIf="turno && !cargandoInfo">
+
+        <!-- Referencia sugerida -->
+        <div class="mb-4">
+          <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Referencia</label>
+          <div *ngIf="referenciaLabel" class="bg-emerald-50 border border-emerald-300 rounded-xl px-4 py-3 text-sm font-bold text-emerald-800">
+             {{ referenciaLabel }}
+          </div>
+          <input *ngIf="!referenciaLabel" type="text" [(ngModel)]="referenciaProducto"
+            placeholder="No se pudo sugerir — escribe el código de referencia"
+            class="w-full border border-amber-400 bg-amber-50 rounded-xl px-4 py-3 text-base">
+        </div>
+
+        <!-- Número de estiva -->
+        <div class="bg-brand-gold-50 border border-brand-gold/40 rounded-xl p-3 mb-4 text-center" *ngIf="info">
+          <div class="text-[10px] font-bold text-brand-gold-dark uppercase">Esta será la Estiva Número</div>
+          <div class="text-3xl font-black text-brand-gold-dark">{{ info.siguiente_numero_estiva }}</div>
+        </div>
+
+        <!-- Plancha + Alto -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Plancha</label>
+            <input type="text" [(ngModel)]="plancha" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-base">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Alto</label>
+            <input type="text" [(ngModel)]="alto" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-base">
+          </div>
+        </div>
+
+        <!-- Cantidad de pacas -->
+        <div class="mb-4">
+          <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Cantidad de Pacas</label>
+          <input type="number" [(ngModel)]="cantidadPacas" class="w-full border border-gray-300 rounded-xl px-4 py-3 text-base">
+        </div>
+
+        <!-- Nombre del operario -->
+        <div class="mb-5">
+          <label class="block text-xs font-bold text-gray-600 uppercase mb-1">Tu Nombre (Operario Montacargas)</label>
+          <input type="text" [(ngModel)]="nombreOperario" placeholder="Nombre completo"
+            class="w-full border border-gray-300 rounded-xl px-4 py-3 text-base">
+        </div>
+
+        <div *ngIf="errorEnvio" class="bg-red-50 border border-brand-red rounded-xl p-3 mb-4 text-xs text-brand-red font-bold text-center">
+          {{ errorEnvio }}
+        </div>
+
+        <button (click)="enviar()" [disabled]="enviando"
+          class="w-full py-4 bg-brand-blue hover:bg-brand-blue-dark disabled:opacity-50 text-white font-black text-base rounded-xl shadow-lg">
+          {{ enviando ? 'Enviando...': 'Registrar Estiba'}}
+        </button>
+      </ng-container>
+    </div>
+
+    <!-- Confirmación de envío -->
+    <div *ngIf="enviado" class="bg-white rounded-2xl shadow-lg p-6 text-center">
+      <div class="text-lg font-black text-emerald-700 mb-1">¡Estiva Registrada!</div>
+      <div class="text-sm text-gray-500 mb-4">Número de Estiva: <span class="font-black text-brand-blue">{{ numeroEstivaAsignado }}</span></div>
+      <button (click)="registrarOtra()" class="w-full py-3 bg-brand-blue hover:bg-brand-blue-dark text-white font-black text-sm rounded-xl">
+        + Registrar Otra Estiva
+      </button>
+    </div>
+
+  </div>
+</div>

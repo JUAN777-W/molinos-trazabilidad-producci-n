@@ -1,0 +1,246 @@
+<div class="min-h-screen bg-gray-100">
+
+  <!-- HEADER — solo para admin; el operario ya tiene su nombre y "Salir" en la barra de navegación de arriba -->
+  <header *ngIf="esAdmin" class="bg-brand-blue text-white px-6 py-4 flex justify-between items-center shadow-sm border-b-4 border-brand-red">
+    <div class="flex items-center gap-3">
+      <img src="assets/logo.png" alt="Molinos del Atlántico" class="h-10 w-auto brightness-0 invert">
+      <div>
+        <h1 class="text-lg font-black">Molinos del Atlántico — Control de Mermas</h1>
+        <p class="text-xs text-blue-100">Bienvenido, {{ nombreUsuario }}</p>
+      </div>
+    </div>
+    <button (click)="logout()" class="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs font-bold uppercase tracking-wide rounded">
+      Cerrar Sesión
+    </button>
+  </header>
+
+  <div class="flex items-start">
+
+    <!-- Sidebar del panel admin — para que al entrar aquí no se sienta como
+         "salir" a otra página aparte. Solo visible para admin. -->
+    <aside *ngIf="esAdmin" class="w-20 flex-shrink-0 bg-white border-r border-gray-200 min-h-screen py-3">
+      <nav class="flex flex-col items-center gap-1 px-1">
+        <a routerLink="/admin" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">dashboard</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Dashboard</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'monitor'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">monitor</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Monitor</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'informes'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">assessment</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Informes</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'mantenimiento'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">build</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Mtto.</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'crear-salida'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">warehouse</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Bodega</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'usuarios'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">group</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Usuarios</span>
+        </a>
+        <div class="w-8 h-px bg-gray-200 my-2"></div>
+        <a routerLink="/calidad" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">biotech</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Calidad</span>
+        </a>
+        <a routerLink="/mermas" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">trending_down</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Mermas</span>
+        </a>
+        <a routerLink="/oee" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">speed</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">OEE</span>
+        </a>
+        <a routerLink="/trazabilidad" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">route</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Traza.</span>
+        </a>
+      </nav>
+    </aside>
+
+  <div class="flex-1 p-6 max-w-6xl mx-auto">
+
+    <div class="mb-6">
+      <h2 class="text-base font-black text-gray-800">Registro de Mermas</h2>
+      <p class="text-xs text-gray-400">
+        Registra bolsas rotas, harina barrida, defectos de sellado o scrap de bobina — para saber en qué se está
+        perdiendo material, no solo cuánto.
+      </p>
+    </div>
+
+    <!-- Formulario de registro -->
+    <div class="bg-white shadow-card rounded-xl p-5 mb-6">
+      <h3 class="text-sm font-black text-gray-800 mb-4">Nuevo Registro</h3>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div>
+          <label class="block text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Fecha</label>
+          <input type="date" [(ngModel)]="form.fecha" (change)="cargarRegistros()"
+            class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold">
+        </div>
+        <div>
+          <label class="block text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Turno</label>
+          <select [(ngModel)]="form.turno" class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold text-slate-700 normal-case">
+            <option value="">-- Seleccionar --</option>
+            <option *ngFor="let t of turnos" [value]="t.key">{{ t.label }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Máquina</label>
+          <select [(ngModel)]="form.maquina" class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold text-brand-blue normal-case">
+            <option value="">-- Seleccionar --</option>
+            <option *ngFor="let m of maquinas" [value]="m">{{ m }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Tipo de Merma</label>
+          <select [(ngModel)]="form.tipo_merma" class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold text-slate-700 normal-case">
+            <option value="">-- Seleccionar --</option>
+            <option *ngFor="let t of tiposMerma" [value]="t.key">{{ t.label }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div>
+          <label class="block text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Referencia</label>
+          <input type="text" [(ngModel)]="form.referencia_producto" placeholder="Ej. EMP MAIZ BLANCO 1000GR"
+            class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold normal-case">
+        </div>
+        <div>
+          <label class="block text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Proveedor Empaque</label>
+          <input type="text" [(ngModel)]="form.proveedor_empaque" placeholder="Ej. TUBOPLAST"
+            class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold normal-case">
+        </div>
+        <div>
+          <label class="block text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Cantidad</label>
+          <div class="flex gap-2">
+            <input type="number" [(ngModel)]="form.cantidad" min="0" step="0.01"
+              class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold">
+            <select [(ngModel)]="form.unidad_medida" class="min-h-[48px] rounded-lg border border-slate-200 bg-white px-2 font-bold normal-case">
+              <option value="KG">KG</option>
+              <option value="UND">UND</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Causa Raíz</label>
+          <input type="text" [(ngModel)]="form.causa_raiz" placeholder="Ej. Mala calibración"
+            class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold normal-case">
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Observaciones</label>
+        <input type="text" [(ngModel)]="form.observaciones"
+          class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold normal-case">
+      </div>
+
+      <button (click)="registrarMerma()" [disabled]="guardando"
+        class="px-5 py-2.5 min-h-[48px] flex items-center gap-1.5 bg-brand-blue hover:bg-brand-blue-dark disabled:opacity-50 text-white font-bold rounded-full text-xs shadow">
+        <span class="material-symbols-outlined text-[18px]">save</span> {{ guardando ? 'Guardando...' : 'Registrar Merma' }}
+      </button>
+      <p *ngIf="errorForm" class="text-xs text-brand-red font-bold mt-3">{{ errorForm }}</p>
+    </div>
+
+    <!-- Listado del día -->
+    <div class="bg-white shadow-card rounded-xl p-5 mb-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-sm font-black text-gray-800">Registros del {{ form.fecha }}</h3>
+        <button (click)="cargarRegistros()" class="px-4 py-2 min-h-[44px] bg-gray-100 text-gray-600 border border-gray-300 rounded-full text-[11px] font-bold hover:bg-gray-200">
+          Actualizar
+        </button>
+      </div>
+
+      <table class="w-full text-xs">
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <th class="px-3 py-2 text-left font-bold text-gray-500">TURNO</th>
+            <th class="px-3 py-2 text-left font-bold text-gray-500">MÁQUINA</th>
+            <th class="px-3 py-2 text-left font-bold text-gray-500">TIPO</th>
+            <th class="px-3 py-2 text-left font-bold text-gray-500">REFERENCIA</th>
+            <th class="px-3 py-2 text-left font-bold text-gray-500">PROVEEDOR</th>
+            <th class="px-3 py-2 text-center font-bold text-gray-500">CANTIDAD</th>
+            <th class="px-3 py-2 text-left font-bold text-gray-500">OPERARIO</th>
+            <th *ngIf="esAdmin" class="px-3 py-2 text-center font-bold text-gray-500">ACCIÓN</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of registros" class="border-b border-gray-100">
+            <td class="px-3 py-2 font-bold">{{ r.turno }}</td>
+            <td class="px-3 py-2 font-mono text-brand-blue font-bold">{{ r.maquina }}</td>
+            <td class="px-3 py-2">{{ etiquetaTipo(r.tipo_merma) }}</td>
+            <td class="px-3 py-2 text-gray-500">{{ r.referencia_producto || '—' }}</td>
+            <td class="px-3 py-2 text-gray-500">{{ r.proveedor_empaque || '—' }}</td>
+            <td class="px-3 py-2 text-center font-black">{{ r.cantidad }} {{ r.unidad_medida }}</td>
+            <td class="px-3 py-2 text-gray-500">{{ r.nombre_operario }}</td>
+            <td *ngIf="esAdmin" class="px-3 py-2 text-center">
+              <button (click)="eliminarRegistro(r.id)" class="px-3 py-1 bg-red-50 hover:bg-red-100 text-brand-red text-[10px] font-bold rounded-lg">
+                Eliminar
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div *ngIf="!cargandoLista && registros.length === 0" class="text-center py-10 text-gray-400 text-xs">
+        No hay mermas registradas para esta fecha.
+      </div>
+    </div>
+
+    <!-- Resumen por proveedor y tipo — solo admin -->
+    <div *ngIf="esAdmin && resumen" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white rounded-xl shadow-md p-5">
+        <h3 class="text-sm font-black text-gray-800 mb-4">Mermas por Proveedor (histórico)</h3>
+        <table class="w-full text-xs">
+          <thead class="bg-gray-50 border-b">
+            <tr>
+              <th class="px-3 py-2 text-left font-bold text-gray-500">PROVEEDOR</th>
+              <th class="px-3 py-2 text-center font-bold text-gray-500">KG</th>
+              <th class="px-3 py-2 text-center font-bold text-gray-500">UND</th>
+              <th class="px-3 py-2 text-center font-bold text-gray-500">REGISTROS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of resumen.por_proveedor" class="border-b border-gray-100">
+              <td class="px-3 py-2 font-bold">{{ p.proveedor }}</td>
+              <td class="px-3 py-2 text-center">{{ p.total_kg }}</td>
+              <td class="px-3 py-2 text-center">{{ p.total_und }}</td>
+              <td class="px-3 py-2 text-center text-gray-500">{{ p.registros }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="resumen.por_proveedor.length === 0" class="text-center py-6 text-gray-400 text-xs">Sin datos todavía.</div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-md p-5">
+        <h3 class="text-sm font-black text-gray-800 mb-4">Mermas por Tipo (histórico)</h3>
+        <table class="w-full text-xs">
+          <thead class="bg-gray-50 border-b">
+            <tr>
+              <th class="px-3 py-2 text-left font-bold text-gray-500">TIPO</th>
+              <th class="px-3 py-2 text-center font-bold text-gray-500">KG</th>
+              <th class="px-3 py-2 text-center font-bold text-gray-500">UND</th>
+              <th class="px-3 py-2 text-center font-bold text-gray-500">REGISTROS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of resumen.por_tipo" class="border-b border-gray-100">
+              <td class="px-3 py-2 font-bold">{{ etiquetaTipo(t.tipo_merma) }}</td>
+              <td class="px-3 py-2 text-center">{{ t.total_kg }}</td>
+              <td class="px-3 py-2 text-center">{{ t.total_und }}</td>
+              <td class="px-3 py-2 text-center text-gray-500">{{ t.registros }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="resumen.por_tipo.length === 0" class="text-center py-6 text-gray-400 text-xs">Sin datos todavía.</div>
+      </div>
+    </div>
+
+  </div>
+  </div>
+</div>

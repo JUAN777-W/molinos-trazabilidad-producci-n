@@ -1,0 +1,449 @@
+<div class="max-w-5xl mx-auto p-3 sm:p-6 my-2 flex flex-col gap-4">
+
+  <!-- AVISO: modo solo lectura (viendo un registro guardado desde el panel admin) -->
+  <div *ngIf="soloLectura" class="no-print flex items-center gap-2 bg-white shadow-card rounded-xl px-4 py-3">
+    <span class="flex-1 text-xs font-mono font-bold text-slate-600">Modo solo lectura — viendo un registro ya guardado. No se puede editar desde aquí.</span>
+    <button (click)="generarPDF()" class="px-5 py-2.5 min-h-[48px] flex items-center gap-1.5 bg-brand-green hover:bg-brand-green-dark text-white font-bold rounded-full text-xs shadow">
+      <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> Generar PDF
+    </button>
+  </div>
+
+  <!-- BOTONES SUPERIORES -->
+  <div *ngIf="!soloLectura" class="no-print bg-white shadow-card rounded-xl px-4 py-3 flex justify-between items-center flex-wrap gap-2">
+    <div class="flex gap-2">
+      <button (click)="limpiar()"
+        class="px-5 py-2.5 min-h-[48px] flex items-center gap-1.5 bg-white text-brand-red border-2 border-brand-red font-bold rounded-full text-xs hover:bg-brand-red-50">
+        <span class="material-symbols-outlined text-[18px]">restart_alt</span> Limpiar
+      </button>
+      <button (click)="abrirModalReporte()"
+        class="px-5 py-2.5 min-h-[48px] flex items-center gap-1.5 bg-brand-gold-50 text-brand-gold-dark border border-brand-gold font-bold rounded-full text-xs hover:bg-brand-gold-50/70">
+        <span class="material-symbols-outlined text-[18px]">report</span> Reportar Problema
+      </button>
+    </div>
+    <div class="flex gap-2 items-center">
+      <span *ngIf="toast" class="text-xs font-mono font-bold text-brand-green bg-brand-green-50 border border-brand-green/30 px-3 py-1.5 rounded-lg">
+        {{ toast }}
+      </span>
+      <button (click)="guardar()"
+        class="px-5 py-2.5 min-h-[48px] flex items-center gap-1.5 bg-brand-blue hover:bg-brand-blue-dark text-white font-bold rounded-full text-xs shadow">
+        <span class="material-symbols-outlined text-[18px]">save</span> Guardar
+      </button>
+    </div>
+  </div>
+
+  <!-- Cuando está en solo lectura, nada de lo que sigue se puede tocar -->
+  <div [class.pointer-events-none]="soloLectura" [class.opacity-95]="soloLectura">
+
+  <!-- ALERTA DE CONSISTENCIA — visible en pantalla, no un popup del navegador -->
+  <div *ngIf="alertaConsistencia" class="no-print mb-3 rounded-lg p-3 flex items-start gap-2 border-2"
+    [class]="alertaEsError ? 'bg-red-50 border-brand-red' : 'bg-amber-50 border-brand-gold'">
+    <div class="flex-1">
+      <div class="text-sm font-black mb-1" [class]="alertaEsError ? 'text-brand-red' : 'text-brand-gold-dark'">
+        {{ alertaEsError ? 'No se guardó — revisa lo siguiente' : 'Aviso' }}
+      </div>
+      <div class="text-xs" [class]="alertaEsError ? 'text-red-800' : 'text-amber-800'">{{ alertaConsistencia }}</div>
+      <ul *ngIf="conflictosConsistencia.length" class="text-[11px] text-red-900 list-disc list-inside mt-1">
+        <li *ngFor="let c of conflictosConsistencia">
+          <b>{{ c.formato }}</b> — máquina {{ c.maquina }}, operario {{ c.operario }}: registrado con <b>Turno {{ c.turno }}</b>
+        </li>
+      </ul>
+      <ul *ngIf="camposFaltantes.length" class="text-[11px] text-red-900 list-disc list-inside mt-1">
+        <li *ngFor="let cf of camposFaltantes">{{ cf }}</li>
+      </ul>
+    </div>
+    <button (click)="alertaConsistencia=null" class="no-print text-lg leading-none font-black opacity-60 hover:opacity-100"
+      [class]="alertaEsError ? 'text-brand-red' : 'text-brand-gold-dark'">✕</button>
+  </div>
+
+  <!-- CABECERA DOCUMENTO -->
+  <div class="bg-white shadow-card rounded-xl overflow-hidden">
+    <table class="w-full table-print text-xs font-bold" style="border:none;">
+      <tr>
+        <td class="w-1/4 border-none" rowspan="2">
+          <div class="flex flex-col items-center py-3">
+            <img src="assets/logo.png" alt="Molinos del Atlántico" class="h-12 w-auto mb-1">
+            <span class="text-base font-black text-brand-blue">La Nieve</span>
+          </div>
+        </td>
+        <td class="w-2/4 text-sm sm:text-base text-center font-black text-brand-blue border-none uppercase" rowspan="2">
+          CONTROL DE MATERIAL DE EMPAQUE<br>PLANTA DE EMPAQUE AL DETAL
+        </td>
+        <td class="w-1/4 text-right pr-4 border-none">
+          <div class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wide">Versión</div>
+          <div class="font-mono text-sm text-slate-700">2</div>
+        </td>
+      </tr>
+      <tr><td class="text-right pr-4 border-none">
+        <div class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wide">Fecha doc.</div>
+        <div class="font-mono text-sm text-slate-700">2017-06-20</div>
+      </td></tr>
+    </table>
+  </div>
+
+  <!-- DATOS CABECERA -->
+  <div class="bg-white shadow-card rounded-xl p-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Fecha</label>
+        <input type="date" [(ngModel)]="fecha" (ngModelChange)="calcular()"
+          class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold">
+      </div>
+      <div>
+        <label class="block text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Máquina</label>
+        <select [(ngModel)]="maquinaA" (ngModelChange)="onMaquinaAChange()"
+          class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold text-brand-blue normal-case">
+          <option value="">-- Seleccionar --</option>
+          <option *ngFor="let m of maquinas" [value]="m">{{ m }}</option>
+        </select>
+        <span *ngIf="esPar" class="inline-block mt-1 font-bold text-brand-blue bg-brand-blue-50 px-2 py-0.5 rounded text-[11px] normal-case">
+          Pareja: {{ maquinaA }} + {{ maquinaB }}
+        </span>
+        <span *ngIf="!esPar && maquinaA" class="inline-block mt-1 text-slate-500 italic text-[11px] normal-case">
+          Máquina sola (sin pareja)
+        </span>
+      </div>
+      <div>
+        <label class="block text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Turno</label>
+        <select [(ngModel)]="turno" (ngModelChange)="calcular()"
+          class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold text-slate-700 normal-case truncate">
+          <option value="">-- Seleccionar --</option>
+          <option *ngFor="let t of turnos" [value]="t.key">{{ t.label }}</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Referencia</label>
+        <select [(ngModel)]="referencia_producto" (ngModelChange)="calcular()"
+          class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold text-brand-blue text-[11px] normal-case truncate">
+          <option *ngFor="let r of refsFiltradas" [value]="r.key">{{ r.label }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA DE BOBINAS -->
+  <div class="bg-white shadow-card rounded-xl overflow-hidden">
+  <div class="overflow-x-auto">
+  <table class="w-full table-print text-xs" style="border:none;">
+    <thead>
+      <tr class="bg-slate-100 font-mono text-slate-500 font-bold text-[11px] uppercase">
+        <th class="w-[8%] min-w-[50px]">MAQ. #</th>
+        <th class="w-[25%] min-w-[180px]">REFERENCIA DE EMPAQUE</th>
+        <th class="w-[13%] min-w-[90px]">PESO AL MONTAR (Kg.)</th>
+        <th class="w-[13%] min-w-[90px]">PESO AL DESMONTAR (Kg.)</th>
+        <th class="w-[11%] min-w-[80px]">CONSUMIDO (Kg.)</th>
+        <th class="w-[11%] min-w-[70px]">CONTADOR</th>
+        <th class="w-[14%] min-w-[120px]">OBSERVACIONES</th>
+        <th class="w-[5%] min-w-[36px] no-print"></th>
+      </tr>
+    </thead>
+
+    <!-- EMPACADORA A -->
+    <tbody>
+      <ng-container *ngFor="let f of filasA; let i = index">
+      <tr class="seccion-azul">
+        <td class="font-black text-brand-blue">{{ labA }}</td>
+        <td>
+          <select [(ngModel)]="f.referencia_empaque" class="w-full">
+            <option value="">-- Seleccionar --</option>
+            <option *ngFor="let re of referenciasEmpaqueFila" [value]="re">{{ re }}</option>
+          </select>
+        </td>
+        <td><input type="number" inputmode="decimal" [(ngModel)]="f.peso_montar" (ngModelChange)="onPesoMontarChange(f, filasA, i)" step="0.01" placeholder="0.00"
+          [class.border-2]="f._atipico && !f._confirmadoAtipico" [class.border-brand-red]="f._atipico && !f._confirmadoAtipico"></td>
+        <td class="relative">
+          <input type="number" inputmode="decimal" [(ngModel)]="f.peso_desmontar" (ngModelChange)="onPesoDesmontarChange(f)" step="0.01" placeholder="0.00"
+            [class.bg-brand-gold-50]="f.peso_desmontar_estimado" [class.italic]="f.peso_desmontar_estimado">
+          <span *ngIf="f.peso_desmontar_estimado && !f._estimacionInconsistente"
+            class="no-print absolute top-0 right-0.5 text-[10px] text-brand-gold-dark font-bold cursor-help"
+            title="≈ Calculado automático — confirma si pesas el rollo real">≈</span>
+          <span *ngIf="f.peso_desmontar_estimado && f._estimacionInconsistente"
+            class="no-print absolute top-0 right-0.5 text-[10px] text-brand-red font-bold cursor-help"
+            title="La estimación salió negativa (el rollo se habría acabado antes) — revisa los datos o pesa el rollo">!</span>
+        </td>
+        <td class="bg-gray-50 font-black celda-calculada">{{ f._consumido | number:'1.2-2' }}</td>
+        <td><input type="number" inputmode="numeric" [(ngModel)]="f.contador" (ngModelChange)="onContadorChange(filasA, i)" placeholder="0"></td>
+        <td><input type="text" [(ngModel)]="f.observaciones"></td>
+        <td class="no-print text-center">
+          <button (click)="eliminarFilaA(i)" class="boton-eliminar-fila">✕</button>
+        </td>
+      </tr>
+      <tr *ngIf="f._atipico && !f._confirmadoAtipico" class="bg-red-50">
+        <td colspan="8" class="px-3 py-1.5 text-[10px] text-brand-red font-bold">
+           Peso al montar inusual (normal: 1-25.80 kg) — revisa si escribiste bien el número.
+          <button (click)="confirmarAtipico(f)" class="no-print ml-2 px-2 py-0.5 bg-white border border-brand-red rounded text-brand-red font-bold hover:bg-red-100">
+             Es correcto, no es error
+          </button>
+        </td>
+      </tr>
+      </ng-container>
+      <tr *ngIf="filasA.length === 0">
+        <td colspan="8" class="text-center text-gray-400 italic text-xs py-2 no-print">Sin filas — usa el botón para agregar</td>
+      </tr>
+      <tr class="no-print">
+        <td colspan="8" class="py-1 px-2 bg-gray-50">
+          <button (click)="agregarFilaA()"
+            class="boton-agregar-fila boton-agregar-fila-uniforme w-full font-bold rounded transition-colors">
+             Agregar fila Empacadora {{ labA }}
+          </button>
+        </td>
+      </tr>
+      <tr class="font-bold bg-gray-100 text-right">
+        <td colspan="4" class="pr-3">TOTAL EMPACADORA {{ labA }}</td>
+        <td class="text-brand-blue font-black">{{ totalKgA | number:'1.2-2' }} Kg.</td>
+        <td class="text-brand-blue font-black">{{ totalCntA }} Unid.</td>
+        <td></td><td class="no-print"></td>
+      </tr>
+    </tbody>
+
+    <!-- EMPACADORA B -->
+    <tbody>
+      <ng-container *ngFor="let f of filasB; let i = index">
+      <tr class="seccion-dorada">
+        <td class="font-black text-brand-gold-dark">{{ labB }}</td>
+        <td>
+          <select [(ngModel)]="f.referencia_empaque" class="w-full">
+            <option value="">-- Seleccionar --</option>
+            <option *ngFor="let re of referenciasEmpaqueFila" [value]="re">{{ re }}</option>
+          </select>
+        </td>
+        <td><input type="number" inputmode="decimal" [(ngModel)]="f.peso_montar" (ngModelChange)="onPesoMontarChange(f, filasB, i)" step="0.01" placeholder="0.00"
+          [class.border-2]="f._atipico && !f._confirmadoAtipico" [class.border-brand-red]="f._atipico && !f._confirmadoAtipico"></td>
+        <td class="relative">
+          <input type="number" inputmode="decimal" [(ngModel)]="f.peso_desmontar" (ngModelChange)="onPesoDesmontarChange(f)" step="0.01" placeholder="0.00"
+            [class.bg-brand-gold-50]="f.peso_desmontar_estimado" [class.italic]="f.peso_desmontar_estimado">
+          <span *ngIf="f.peso_desmontar_estimado && !f._estimacionInconsistente"
+            class="no-print absolute top-0 right-0.5 text-[10px] text-brand-gold-dark font-bold cursor-help"
+            title="≈ Calculado automático — confirma si pesas el rollo real">≈</span>
+          <span *ngIf="f.peso_desmontar_estimado && f._estimacionInconsistente"
+            class="no-print absolute top-0 right-0.5 text-[10px] text-brand-red font-bold cursor-help"
+            title="La estimación salió negativa (el rollo se habría acabado antes) — revisa los datos o pesa el rollo">!</span>
+        </td>
+        <td class="bg-gray-50 font-black celda-calculada">{{ f._consumido | number:'1.2-2' }}</td>
+        <td><input type="number" inputmode="numeric" [(ngModel)]="f.contador" (ngModelChange)="onContadorChange(filasB, i)" placeholder="0"></td>
+        <td><input type="text" [(ngModel)]="f.observaciones"></td>
+        <td class="no-print text-center">
+          <button (click)="eliminarFilaB(i)" class="boton-eliminar-fila">✕</button>
+        </td>
+      </tr>
+      <tr *ngIf="f._atipico && !f._confirmadoAtipico" class="bg-red-50">
+        <td colspan="8" class="px-3 py-1.5 text-[10px] text-brand-red font-bold">
+           Peso al montar inusual (normal: 1-25.80 kg) — revisa si escribiste bien el número.
+          <button (click)="confirmarAtipico(f)" class="no-print ml-2 px-2 py-0.5 bg-white border border-brand-red rounded text-brand-red font-bold hover:bg-red-100">
+             Es correcto, no es error
+          </button>
+        </td>
+      </tr>
+      </ng-container>
+      <tr *ngIf="filasB.length === 0">
+        <td colspan="8" class="text-center text-gray-400 italic text-xs py-2 no-print">Sin filas — usa el botón para agregar</td>
+      </tr>
+      <tr class="no-print">
+        <td colspan="8" class="py-1 px-2 bg-gray-50">
+          <button (click)="agregarFilaB()"
+            class="boton-agregar-fila boton-agregar-fila-uniforme w-full font-bold rounded transition-colors">
+             Agregar fila Empacadora {{ labB }}
+          </button>
+        </td>
+      </tr>
+      <tr class="font-bold bg-gray-100 text-right">
+        <td colspan="4" class="pr-3">TOTAL EMPACADORA {{ labB }}</td>
+        <td class="text-brand-gold-dark font-black">{{ totalKgB | number:'1.2-2' }} Kg.</td>
+        <td class="text-brand-gold-dark font-black">{{ totalCntB }} Unid.</td>
+        <td></td><td class="no-print"></td>
+      </tr>
+    </tbody>
+
+    <!-- ENFARDADORA -->
+    <tbody>
+      <tr class="bg-brand-blue-50">
+        <td colspan="8" class="py-2 px-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-brand-blue whitespace-nowrap">Referencia de Fardo (Enfardadora):</span>
+            <select [(ngModel)]="referencia_enfardadora"
+              class="flex-1 font-bold text-brand-blue bg-white px-2 py-1 rounded border border-brand-blue/30 normal-case text-[11px]">
+              <option value="">-- Seleccionar ancho de fardo --</option>
+              <option *ngFor="let rf of referenciasFardo" [value]="rf.codigo">{{ rf.descripcion }}</option>
+            </select>
+          </div>
+          <div *ngIf="!cargandoReferenciasFardo && referenciasFardo.length === 0" class="text-[10px] text-gray-400 italic mt-1">
+            No se encontró ninguna referencia de fardo en el catálogo de bodega — pide que la agreguen ahí.
+          </div>
+        </td>
+      </tr>
+      <ng-container *ngFor="let f of filasENF; let i = index">
+      <tr class="seccion-gris">
+        <td class="font-black text-gray-700">ENF</td>
+        <td>
+          <select [(ngModel)]="f.referencia_empaque" class="w-full">
+            <option value="">-- Seleccionar --</option>
+            <option *ngFor="let re of referenciasEmpaqueEnf" [value]="re">{{ re }}</option>
+          </select>
+        </td>
+        <td><input type="number" inputmode="decimal" [(ngModel)]="f.peso_montar" (ngModelChange)="onPesoMontarChange(f, filasENF, i)" step="0.01" placeholder="0.00"></td>
+        <td class="relative">
+          <input type="number" inputmode="decimal" [(ngModel)]="f.peso_desmontar" (ngModelChange)="onPesoDesmontarChange(f)" step="0.01" placeholder="0.00"
+            [class.bg-brand-gold-50]="f.peso_desmontar_estimado" [class.italic]="f.peso_desmontar_estimado">
+          <span *ngIf="f.peso_desmontar_estimado && !f._estimacionInconsistente"
+            class="no-print absolute top-0 right-0.5 text-[10px] text-brand-gold-dark font-bold cursor-help"
+            title="≈ Calculado automático — confirma si pesas el rollo real">≈</span>
+          <span *ngIf="f.peso_desmontar_estimado && f._estimacionInconsistente"
+            class="no-print absolute top-0 right-0.5 text-[10px] text-brand-red font-bold cursor-help"
+            title="La estimación salió negativa (el rollo se habría acabado antes) — revisa los datos o pesa el rollo">!</span>
+        </td>
+        <td class="bg-gray-50 font-black celda-calculada">{{ f._consumido | number:'1.2-2' }}</td>
+        <td><input type="number" inputmode="numeric" [(ngModel)]="f.contador" (ngModelChange)="onContadorChange(filasENF, i)" placeholder="0"></td>
+        <td><input type="text" [(ngModel)]="f.observaciones"></td>
+        <td class="no-print text-center">
+          <button (click)="eliminarFilaENF(i)" class="boton-eliminar-fila">✕</button>
+        </td>
+      </tr>
+      </ng-container>
+      <tr *ngIf="filasENF.length === 0">
+        <td colspan="8" class="text-center text-gray-400 italic text-xs py-2 no-print">Sin filas — usa el botón para agregar</td>
+      </tr>
+      <tr class="no-print">
+        <td colspan="8" class="py-1 px-2 bg-gray-50">
+          <button (click)="agregarFilaENF()"
+            class="boton-agregar-fila boton-agregar-fila-uniforme w-full font-bold rounded transition-colors">
+             Agregar fila Enfardadora
+          </button>
+        </td>
+      </tr>
+      <tr class="font-bold bg-gray-100 text-right">
+        <td colspan="4" class="pr-3">TOTAL ENFARDADORA</td>
+        <td class="text-gray-800 font-black">{{ totalKgENF | number:'1.2-2' }} Kg.</td>
+        <td class="text-gray-800 font-black">{{ totalCntENF }} Unid.</td>
+        <td></td><td class="no-print"></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  </div>
+
+  <!-- TOTALES -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="rounded-xl bg-brand-blue text-white p-4 text-center shadow-card">
+      <div class="text-[10px] font-mono font-bold uppercase tracking-wide text-white/70">Total consumido por turno</div>
+      <div class="text-2xl font-black mt-1">{{ totalConsumoAB | number:'1.2-2' }} Kg.</div>
+    </div>
+    <div class="rounded-xl bg-brand-red text-white p-4 text-center shadow-card">
+      <div class="text-[10px] font-mono font-bold uppercase tracking-wide text-white/70">Total consumo enfardadora</div>
+      <div class="text-2xl font-black mt-1">{{ totalKgENF | number:'1.2-2' }} Kg.</div>
+    </div>
+    <div class="rounded-xl bg-brand-gold text-slate-900 p-4 text-center shadow-card">
+      <div class="text-[10px] font-mono font-bold uppercase tracking-wide text-slate-900/60">Total pacas por turno</div>
+      <div class="text-2xl font-black mt-1">{{ totalPacas | number:'1.1-1' }} Pacas</div>
+    </div>
+  </div>
+
+  <!-- DESPERDICIO -->
+  <div class="bg-white shadow-card rounded-xl p-4">
+    <p class="text-xs font-mono font-black text-slate-500 uppercase tracking-wide mb-3">Registro de Desperdicios</p>
+
+    <!-- Desperdicio Material de Empaque (Bobinas) -->
+    <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
+      <div class="rounded-lg border border-brand-blue/20 bg-brand-blue-50 p-3">
+        <label class="block text-xs font-bold text-brand-blue uppercase mb-1">Desperdicio Material Empaque (Kg.):</label>
+        <input type="number" inputmode="decimal" [(ngModel)]="peso_desperdicio" (ngModelChange)="calcular()" step="0.01" placeholder="0.00"
+          class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold text-sm">
+      </div>
+      <div class="flex items-center justify-center text-xs font-bold gap-2 p-3 rounded-lg border border-dashed border-brand-blue/30">
+        <span>DESP. EMPAQUE (%) =</span>
+        <div class="flex flex-col items-center text-[10px]">
+          <span class="border-b border-slate-400 pb-0.5 px-2">DESPERDICIO EMPAQUE (Kg.)</span>
+          <span class="pt-0.5 px-2">TOTAL CONSUMIDO A+B (Kg.)</span>
+        </div>
+        <span>x 100 =</span>
+        <span class="text-sm font-black text-brand-blue bg-brand-blue-50 px-3 py-1 border border-brand-blue/30 rounded-lg">
+          {{ porcentajeDesperdicio | number:'1.2-2' }} %
+        </span>
+      </div>
+    </div>
+
+    <!-- Desperdicio Fardo -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
+      <div class="rounded-lg border border-brand-red/20 bg-brand-red-50 p-3">
+        <label class="block text-xs font-bold text-brand-red uppercase mb-1">Desperdicio Fardo (Kg.):</label>
+        <input type="number" inputmode="decimal" [(ngModel)]="peso_desperdicio_fardo" (ngModelChange)="calcular()" step="0.01" placeholder="0.00"
+          class="w-full min-h-[48px] rounded-lg border border-slate-200 bg-white px-3 font-bold text-sm">
+      </div>
+      <div class="flex items-center justify-center text-xs font-bold gap-2 p-3 rounded-lg border border-dashed border-brand-red/30">
+        <span>DESP. FARDO (%) =</span>
+        <div class="flex flex-col items-center text-[10px]">
+          <span class="border-b border-slate-400 pb-0.5 px-2">DESPERDICIO FARDO (Kg.)</span>
+          <span class="pt-0.5 px-2">TOTAL CONSUMIDO ENFARDADORA (Kg.)</span>
+        </div>
+        <span>x 100 =</span>
+        <span class="text-sm font-black text-brand-red bg-brand-red-50 px-3 py-1 border border-brand-red/30 rounded-lg">
+          {{ porcentajeDesperdicioFardo | number:'1.2-2' }} %
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIRMA -->
+  <div class="bg-white shadow-card rounded-xl p-4">
+    <div class="flex flex-col sm:flex-row gap-4 items-end">
+      <div class="flex-1 max-w-xs">
+        <div class="text-xs font-mono font-bold uppercase tracking-wide text-slate-500 mb-1">Firma del Operario:</div>
+
+        <!-- Firma cargada desde la cuenta del operario -->
+        <div *ngIf="firmaAutomatica" class="h-20 border-2 border-brand-green/40 rounded-lg flex items-center justify-center bg-brand-green-50">
+          <img [src]="firma_data" alt="Firma del operario" class="max-h-full max-w-full object-contain">
+        </div>
+        <div *ngIf="firmaAutomatica" class="text-[9px] text-brand-green font-bold mt-0.5 no-print">
+           Firma registrada de tu cuenta
+        </div>
+
+        <!-- Espacio reservado: aún no hay firma cargada para este usuario -->
+        <div *ngIf="!firmaAutomatica && !cargandoFirma" class="h-20 border-2 border-dashed border-brand-gold/50 rounded-lg flex items-center justify-center bg-brand-gold-50">
+          <span class="text-[10px] text-slate-500 italic px-2 text-center">La firma aparecerá aquí una vez esté registrada</span>
+        </div>
+        <div *ngIf="!firmaAutomatica && !cargandoFirma" class="text-[9px] text-brand-gold-dark font-bold mt-0.5 no-print">
+           Todavía no tienes una firma registrada — pide al administrador que suba tu firma escaneada.
+        </div>
+
+        <div *ngIf="cargandoFirma" class="h-20 border-2 border-slate-200 rounded-lg flex items-center justify-center bg-slate-50">
+          <span class="text-[10px] text-slate-400">Buscando tu firma registrada...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div> <!-- fin del envoltorio de solo lectura -->
+
+  <!-- MODAL: Reportar Problema de Mantenimiento -->
+  <div *ngIf="mostrandoModalReporte" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 no-print">
+    <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm">
+      <div class="text-sm font-black text-slate-800 mb-1">Reportar Problema de Mantenimiento</div>
+      <div class="text-xs text-slate-500 mb-4">Esto le llega directo al ingeniero de mantenimiento.</div>
+
+      <label class="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-1">Máquina</label>
+      <select [(ngModel)]="formReporte.maquina" class="w-full min-h-[48px] border border-slate-200 rounded-lg px-3 text-sm mb-3">
+        <option value="">-- Seleccionar --</option>
+        <option *ngFor="let m of maquinas" [value]="m">{{ m }}</option>
+      </select>
+
+      <label class="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-1">¿Qué está pasando?</label>
+      <textarea [(ngModel)]="formReporte.descripcion_problema" rows="3" placeholder="Describe el problema..."
+        class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm mb-3"></textarea>
+
+      <label class="block text-[10px] font-mono font-bold text-slate-500 uppercase mb-1">Prioridad</label>
+      <select [(ngModel)]="formReporte.prioridad" class="w-full min-h-[48px] border border-slate-200 rounded-lg px-3 text-sm mb-4">
+        <option value="CRITICA">Crítica — detiene la línea o riesgo de seguridad</option>
+        <option value="ALTA">Alta — afecta calidad, la máquina sigue operando</option>
+        <option value="MEDIA">Media — desgaste o pérdida de eficiencia</option>
+        <option value="BAJA">Baja — sin impacto en producción</option>
+      </select>
+
+      <div class="flex gap-3 justify-end">
+        <button (click)="cerrarModalReporte()" class="px-4 py-2.5 min-h-[48px] bg-slate-100 text-slate-700 border border-slate-200 font-bold rounded-lg text-xs hover:bg-slate-200">
+          Cancelar
+        </button>
+        <button (click)="enviarReporte()" [disabled]="enviandoReporte" class="px-4 py-2.5 min-h-[48px] bg-brand-gold-dark hover:bg-brand-gold-dark/90 disabled:opacity-50 text-white font-bold rounded-lg text-xs shadow">
+          {{ enviandoReporte ? 'Enviando...' : 'Enviar Reporte' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

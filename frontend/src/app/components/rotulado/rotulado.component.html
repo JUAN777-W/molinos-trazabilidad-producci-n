@@ -1,0 +1,196 @@
+<div class="max-w-5xl mx-auto p-3 sm:p-6 my-2 flex flex-col gap-4">
+
+  <!-- AVISO: modo solo lectura -->
+  <div *ngIf="soloLectura" class="no-print flex items-center gap-2 bg-white shadow-card rounded-xl px-4 py-3">
+    <span class="flex-1 text-xs font-mono font-bold text-slate-600">Modo solo lectura — viendo un registro ya guardado.</span>
+    <button (click)="generarPDF()" class="px-5 py-2.5 min-h-[48px] flex items-center gap-1.5 bg-brand-green hover:bg-brand-green-dark text-white font-bold rounded-full text-xs shadow">
+      <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> Generar PDF
+    </button>
+  </div>
+
+  <!-- BOTONES -->
+  <div *ngIf="!soloLectura" class="no-print bg-white shadow-card rounded-xl px-4 py-3 flex justify-between items-center flex-wrap gap-2">
+    <button (click)="limpiar()"
+      class="px-5 py-2.5 min-h-[48px] flex items-center gap-1.5 bg-white text-brand-red border-2 border-brand-red font-bold rounded-full text-xs hover:bg-brand-red-50">
+      <span class="material-symbols-outlined text-[18px]">restart_alt</span> Limpiar Formulario
+    </button>
+    <div class="flex gap-2 items-center">
+      <span *ngIf="toast" class="text-xs font-mono font-bold text-brand-green bg-brand-green-50 border border-brand-green/30 px-3 py-1.5 rounded-lg">
+        {{ toast }}
+      </span>
+    </div>
+  </div>
+
+  <div [class.pointer-events-none]="soloLectura" [class.opacity-95]="soloLectura">
+
+  <!-- ALERTA DE CONSISTENCIA — visible en pantalla, no un popup del navegador -->
+  <div *ngIf="alertaConsistencia" class="no-print mb-3 rounded-lg p-3 flex items-start gap-2 border-2"
+    [class]="alertaEsError ? 'bg-red-50 border-brand-red' : 'bg-amber-50 border-brand-gold'">
+    <div class="flex-1">
+      <div class="text-sm font-black mb-1" [class]="alertaEsError ? 'text-brand-red' : 'text-brand-gold-dark'">
+        {{ alertaEsError ? 'No se guardó — revisa lo siguiente' : 'Aviso' }}
+      </div>
+      <div class="text-xs" [class]="alertaEsError ? 'text-red-800' : 'text-amber-800'">{{ alertaConsistencia }}</div>
+      <ul *ngIf="conflictosConsistencia.length" class="text-[11px] text-red-900 list-disc list-inside mt-1">
+        <li *ngFor="let c of conflictosConsistencia">
+          <b>{{ c.formato }}</b> — máquina {{ c.maquina }}, operario {{ c.operario }}: registrado con <b>Turno {{ c.turno }}</b>
+        </li>
+      </ul>
+      <ul *ngIf="camposFaltantes.length" class="text-[11px] text-red-900 list-disc list-inside mt-1">
+        <li *ngFor="let cf of camposFaltantes">{{ cf }}</li>
+      </ul>
+    </div>
+    <button (click)="alertaConsistencia=null" class="no-print text-lg leading-none font-black opacity-60 hover:opacity-100"
+      [class]="alertaEsError ? 'text-brand-red' : 'text-brand-gold-dark'">✕</button>
+  </div>
+
+  <!-- CABECERA DOCUMENTO -->
+  <div class="bg-white shadow-card rounded-xl overflow-hidden">
+    <table class="w-full table-print text-xs font-bold" style="border:none;">
+      <tr>
+        <td class="w-1/4 border-none" rowspan="2">
+          <div class="flex flex-col items-center py-3">
+            <img src="assets/logo.png" alt="Molinos del Atlántico" class="h-12 w-auto mb-1">
+            <span class="text-base font-black text-brand-blue">La Nieve</span>
+          </div>
+        </td>
+        <td class="w-2/4 text-sm sm:text-base text-center font-black text-brand-blue border-none uppercase" rowspan="2">CONTROL DE ROTULADO Y SELLADO EN PRODUCCIÓN</td>
+        <td class="w-1/4 text-right pr-4 border-none">
+          <div class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wide">Versión</div>
+          <div class="font-mono text-sm text-slate-700">1</div>
+        </td>
+      </tr>
+      <tr><td class="text-right pr-4 border-none">
+        <div class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wide">Fecha</div>
+        <div class="font-mono text-sm text-slate-700">2024-12-15</div>
+      </td></tr>
+    </table>
+  </div>
+
+  <!-- Selector de planilla — solo aparece cuando la máquina es pareja (2 planillas) -->
+  <div *ngIf="planillas.length > 1" class="no-print flex gap-2">
+    <button *ngFor="let p of planillas; let idx = index" (click)="cambiarPlanillaActiva(idx)"
+      [class]="'flex-1 py-3 min-h-[48px] rounded-lg text-sm font-black border-2 transition-colors ' +
+      (planillaActivaIdx === idx ? 'bg-brand-blue text-white border-brand-blue' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50')">
+      Planilla {{ idx + 1 }} — {{ p.maquina || '(máquina)' }}
+    </button>
+  </div>
+
+  <!-- DATOS CABECERA (siempre de solo lectura — vienen de Bobinas, no se editan aquí) -->
+  <div class="bg-white shadow-card rounded-xl p-4 flex flex-col gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div>
+        <div class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Fecha</div>
+        <div class="min-h-[48px] flex items-center px-3 rounded-lg border border-slate-200 bg-slate-50 font-mono font-bold text-slate-700">
+          {{ fecha || '—' }}
+        </div>
+      </div>
+      <div>
+        <div class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Turno</div>
+        <div class="min-h-[48px] flex items-center px-3 rounded-lg border border-slate-200 bg-slate-50 font-bold text-slate-700">
+          {{ turno ? turnoLabel(turno) : '—' }}
+        </div>
+      </div>
+      <div>
+        <div class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Máquina</div>
+        <div class="min-h-[48px] flex items-center px-3 rounded-lg border border-slate-200 bg-slate-50 font-bold text-brand-blue">
+          {{ maquina || '—' }}
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Referencia</div>
+      <div class="min-h-[48px] flex items-center px-3 rounded-lg border border-slate-200 bg-slate-50 font-bold text-brand-blue text-sm">
+        {{ refInfo(referencia)?.label || '—' }}
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA DE FILAS -->
+  <div class="bg-white shadow-card rounded-xl overflow-hidden">
+  <div class="overflow-x-auto">
+  <table class="w-full table-print text-xs" style="border:none;">
+    <thead>
+      <tr class="font-mono font-bold text-[11px] bg-slate-100 text-slate-500 uppercase">
+        <th class="w-[13%]">HORA</th>
+        <th class="w-[30%]">FECHADO ESPERADO</th>
+        <th class="w-[18%]">¿El fechado cumple?</th>
+        <th class="w-[18%]">¿El sellado cumple?</th>
+        <th class="w-[21%]">MOTIVO / OBSERVACIÓN</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let f of filas">
+        <td class="font-mono font-bold bg-slate-50 text-[11px]">{{ f.hora }}</td>
+
+        <!-- Celda de fechado: se calcula solo (lote, hora, vencimiento) — el operario solo compara contra lo impreso -->
+        <td class="p-1">
+          <div *ngIf="f.fechado_cumple !== 'NA' && f.fechado" class="text-left text-[11px] px-1 leading-tight whitespace-pre-line font-bold text-gray-700 bg-gray-50 rounded py-1">{{ f.fechado }}</div>
+          <div *ngIf="f.fechado_cumple !== 'NA' && !f.fechado" class="text-center text-[10px] text-gray-400 italic px-1 py-2">— (falta la referencia)</div>
+          <div *ngIf="f.fechado_cumple === 'NA'" class="text-center text-[10px] text-gray-400 italic px-1 py-2">— Sin producción esta hora</div>
+          <label class="no-print flex items-center gap-1 mt-1 text-[9px] text-gray-500 font-semibold cursor-pointer">
+            <input type="checkbox" [checked]="f.fechado_cumple === 'NA'" (change)="toggleSinProduccion(f)">
+            Sin producción esta hora
+          </label>
+        </td>
+
+        <!-- ¿Fechado cumple? -->
+        <td class="p-0">
+          <select *ngIf="f.fechado_cumple !== 'NA'" [(ngModel)]="f.fechado_cumple" (ngModelChange)="onSemaforo(f)"
+            [class]="'semaforo h-full w-full font-bold ' + f._claseF">
+            <option value="SI">SÍ</option>
+            <option value="NO">NO</option>
+          </select>
+          <div *ngIf="f.fechado_cumple === 'NA'" class="h-full w-full flex items-center justify-center font-bold text-gray-400 bg-gray-100 text-[11px]">N/A</div>
+        </td>
+
+        <!-- ¿Sellado cumple? -->
+        <td class="p-0">
+          <select *ngIf="f.sellado_cumple !== 'NA'" [(ngModel)]="f.sellado_cumple" (ngModelChange)="onSemaforo(f)"
+            [class]="'semaforo h-full w-full font-bold ' + f._claseS">
+            <option value="SI">SÍ</option>
+            <option value="NO">NO</option>
+          </select>
+          <div *ngIf="f.sellado_cumple === 'NA'" class="h-full w-full flex items-center justify-center font-bold text-gray-400 bg-gray-100 text-[11px]">N/A</div>
+        </td>
+
+        <!-- Motivo / Observación -->
+        <td class="p-1 text-[10px]">
+          <input type="text" [(ngModel)]="f.referencia"
+            class="text-left text-[10px] px-1 w-full" placeholder="Observación...">
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  </div>
+
+  </div> <!-- fin del envoltorio de solo lectura -->
+
+  <!-- FIRMA -->
+  <div class="bg-white shadow-card rounded-xl p-4">
+    <div class="max-w-xs">
+      <div class="text-xs font-mono font-bold uppercase tracking-wide text-slate-500 mb-1">Firma del Operario:</div>
+
+      <!-- Firma cargada desde la cuenta del operario -->
+      <div *ngIf="firmaAutomatica" class="h-20 border-2 border-brand-green/40 rounded-lg flex items-center justify-center bg-brand-green-50">
+        <img [src]="firma_data" alt="Firma del operario" class="max-h-full max-w-full object-contain">
+      </div>
+      <div *ngIf="firmaAutomatica" class="text-[9px] text-brand-green font-bold mt-0.5 no-print">
+         Firma registrada de tu cuenta
+      </div>
+
+      <!-- Espacio reservado: aún no hay firma cargada para este usuario -->
+      <div *ngIf="!firmaAutomatica && !cargandoFirma" class="h-20 border-2 border-dashed border-brand-gold/50 rounded-lg flex items-center justify-center bg-brand-gold-50">
+        <span class="text-[10px] text-slate-500 italic px-2 text-center">La firma aparecerá aquí una vez esté registrada</span>
+      </div>
+      <div *ngIf="!firmaAutomatica && !cargandoFirma" class="text-[9px] text-brand-gold-dark font-bold mt-0.5 no-print">
+         Todavía no tienes una firma registrada — pide al administrador que suba tu firma escaneada.
+      </div>
+
+      <div *ngIf="cargandoFirma" class="h-20 border-2 border-slate-200 rounded-lg flex items-center justify-center bg-slate-50">
+        <span class="text-[10px] text-slate-400">Buscando tu firma registrada...</span>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,218 @@
+<div class="min-h-screen bg-gray-100">
+
+  <div class="flex items-start">
+
+    <!-- Sidebar del panel admin — este formato no tiene su propio encabezado
+         (se usa normalmente dentro del menú de operario), así que si entra un
+         admin por Accesos Rápidos, esta barra evita que quede "perdido" sin
+         logo ni forma de navegar. Solo visible para admin. -->
+    <aside *ngIf="esAdmin" class="no-print w-20 flex-shrink-0 bg-white border-r border-gray-200 min-h-screen py-3">
+      <nav class="flex flex-col items-center gap-1 px-1">
+        <a routerLink="/admin" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">dashboard</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Dashboard</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'monitor'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">monitor</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Monitor</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'informes'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">assessment</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Informes</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'mantenimiento'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">build</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Mtto.</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'crear-salida'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">warehouse</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Bodega</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'usuarios'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">group</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Usuarios</span>
+        </a>
+        <div class="w-8 h-px bg-gray-200 my-2"></div>
+        <a routerLink="/calidad" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">biotech</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Calidad</span>
+        </a>
+        <a routerLink="/mermas" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">trending_down</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Mermas</span>
+        </a>
+        <a routerLink="/oee" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">speed</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">OEE</span>
+        </a>
+        <a routerLink="/trazabilidad" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">route</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Traza.</span>
+        </a>
+      </nav>
+    </aside>
+
+  <div class="flex-1 max-w-5xl mx-auto p-3 sm:p-6 my-2 flex flex-col gap-4">
+
+  <!-- AVISO: modo solo lectura -->
+  <div *ngIf="soloLectura" class="no-print flex items-center gap-2 bg-white shadow-card rounded-xl px-4 py-3">
+    <span class="flex-1 text-xs font-mono font-bold text-slate-600">Modo solo lectura — viendo un registro ya guardado.</span>
+    <button (click)="generarPDF()" class="px-5 py-2.5 min-h-[48px] flex items-center gap-1.5 bg-brand-green hover:bg-brand-green-dark text-white font-bold rounded-full text-xs shadow">
+      <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> Generar PDF
+    </button>
+  </div>
+
+  <!-- BOTONES -->
+  <div *ngIf="!soloLectura" class="no-print bg-white shadow-card rounded-xl px-4 py-3 flex justify-between items-center flex-wrap gap-2">
+    <button (click)="limpiar()"
+      class="px-5 py-2.5 min-h-[48px] flex items-center gap-1.5 bg-white text-brand-red border-2 border-brand-red font-bold rounded-full text-xs hover:bg-brand-red-50">
+      <span class="material-symbols-outlined text-[18px]">restart_alt</span> Limpiar Formulario
+    </button>
+    <div class="flex gap-2 items-center">
+      <span *ngIf="toast" class="text-xs font-mono font-bold text-brand-green bg-brand-green-50 border border-brand-green/30 px-3 py-1.5 rounded-lg">
+        {{ toast }}
+      </span>
+      <button (click)="guardar()"
+        class="px-5 py-2.5 min-h-[48px] flex items-center gap-1.5 bg-brand-blue hover:bg-brand-blue-dark text-white font-bold rounded-full text-xs shadow">
+        <span class="material-symbols-outlined text-[18px]">save</span> Guardar
+      </button>
+    </div>
+  </div>
+
+  <div [class.pointer-events-none]="soloLectura" [class.opacity-95]="soloLectura">
+
+  <!-- ALERTA -->
+  <div *ngIf="alertaConsistencia" class="no-print mb-3 rounded-lg p-3 flex items-start gap-2 border-2 bg-red-50 border-brand-red">
+    <div class="flex-1">
+      <div class="text-sm font-black mb-1 text-brand-red">No se guardó — revisa lo siguiente</div>
+      <div class="text-xs text-red-800">{{ alertaConsistencia }}</div>
+      <ul *ngIf="camposFaltantes.length" class="text-[11px] text-red-900 list-disc list-inside mt-1">
+        <li *ngFor="let cf of camposFaltantes">{{ cf }}</li>
+      </ul>
+    </div>
+    <button (click)="alertaConsistencia=null" class="no-print text-lg leading-none font-black opacity-60 hover:opacity-100 text-brand-red">✕</button>
+  </div>
+
+  <!-- CABECERA -->
+  <div class="bg-white shadow-card rounded-xl overflow-hidden">
+    <table class="w-full table-print text-xs font-bold" style="border:none;">
+      <tr>
+        <td class="w-1/4 border-none" rowspan="2">
+          <div class="flex flex-col items-center py-3">
+            <img src="assets/logo.png" alt="Molinos del Atlántico" class="h-12 w-auto mb-1">
+            <span class="text-base font-black text-brand-blue">La Nieve</span>
+          </div>
+        </td>
+        <td class="w-2/4 text-sm sm:text-base text-center font-black text-brand-blue border-none uppercase" rowspan="2">
+          CONTROL DE PESO ENFARDADORAS<br>ÁREA DE EMPAQUE AL DETAL
+        </td>
+        <td class="w-1/4 text-right pr-4 border-none">
+          <div class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wide">Versión</div>
+          <div class="font-mono text-sm text-slate-700">1</div>
+        </td>
+      </tr>
+      <tr><td class="text-right pr-4 border-none">
+        <div class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wide">Fecha doc.</div>
+        <div class="font-mono text-sm text-slate-700">2026-08-16</div>
+      </td></tr>
+    </table>
+  </div>
+
+  <!-- Aviso: la máquina activa no tiene enfardadora asociada -->
+  <div *ngIf="sinEnfardadora" class="no-print rounded-xl p-4 bg-brand-gold-50 border-2 border-brand-gold text-sm text-brand-gold-dark font-bold text-center">
+     La máquina {{ maquinaA }} no tiene una enfardadora asociada — este formato no aplica para esta línea.
+  </div>
+
+  <ng-container *ngIf="!sinEnfardadora">
+
+  <!-- DATOS CABECERA (siempre de solo lectura — vienen de Bobinas, no se editan aquí) -->
+  <div class="bg-white shadow-card rounded-xl p-4 flex flex-col gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div>
+        <div class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Fecha</div>
+        <div class="min-h-[48px] flex items-center px-3 rounded-lg border border-slate-200 bg-slate-50 font-mono font-bold text-slate-700">{{ fecha || '—' }}</div>
+      </div>
+      <div>
+        <div class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Turno</div>
+        <div class="min-h-[48px] flex items-center px-3 rounded-lg border border-slate-200 bg-slate-50 font-bold text-slate-700">{{ turno ? turnoLabel(turno) : '—' }}</div>
+      </div>
+      <div>
+        <div class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Enfardadora</div>
+        <div class="min-h-[48px] flex items-center px-3 rounded-lg border border-slate-200 bg-slate-50 font-bold text-brand-blue normal-case text-[11px]">{{ enfardadora || '—' }}</div>
+      </div>
+    </div>
+    <div>
+      <div class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Referencia (ancho de fardo)</div>
+      <div class="min-h-[48px] flex items-center px-3 rounded-lg border border-slate-200 bg-slate-50 font-bold text-brand-blue normal-case text-[11px]">{{ referencia || '—' }}</div>
+    </div>
+  </div>
+
+  <!-- TABLA -->
+  <div class="bg-white shadow-card rounded-xl overflow-hidden">
+  <div class="text-center font-mono font-bold text-xs bg-slate-100 text-slate-500 uppercase tracking-wide py-2">Control de Peso — Fardos (Kg.)</div>
+  <div class="no-print text-center text-[11px] text-brand-blue font-bold py-1.5 bg-brand-blue-50">↔ Desliza para ver todas las muestras</div>
+  <div class="overflow-x-auto">
+  <table class="w-full table-print text-xs" style="border:none;">
+    <thead>
+      <tr class="bg-slate-100 text-slate-500 text-[10px] font-mono font-bold uppercase">
+        <th class="min-w-[70px] columna-fija bg-slate-100">HORA</th>
+        <th *ngFor="let idx of muestraIndices" class="min-w-[52px]">{{ idx + 1 }}</th>
+        <th class="min-w-[140px]">OBSERVACIONES</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let f of filas">
+        <td class="font-mono font-bold bg-slate-50 text-[11px] columna-fija">{{ f.hora }}</td>
+        <td class="muestra-cell" *ngFor="let idx of muestraIndices">
+          <input type="number" inputmode="decimal" [ngModel]="getMuestra(f, idx)" (ngModelChange)="onMuestraChange(f, idx, $event)" class="peso-input" placeholder="-">
+        </td>
+        <td><input type="text" [(ngModel)]="f.observaciones"></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  </div>
+
+  <!-- TABLA REFERENCIA -->
+  <div class="bg-white shadow-card rounded-xl overflow-hidden">
+  <table class="table-print w-full text-[10px] uppercase font-bold" style="border:none;">
+    <tr class="bg-brand-gold-50"><td colspan="3" class="font-black text-brand-gold-dark">MÍNIMOS Y MÁXIMOS FARDOS</td></tr>
+    <tr class="bg-slate-100 font-mono text-slate-500"><td>FARDOS</td><td>MÍNIMO</td><td>MÁXIMO</td></tr>
+    <tr><td>Harina Trigo 500 x 25</td><td>12630</td><td>12720</td></tr>
+    <tr><td>Harina Trigo 1000 x 10</td><td>10100</td><td>10180</td></tr>
+    <tr><td>Harina Maíz 500 x 24</td><td>12120</td><td>12210</td></tr>
+    <tr><td>Harina Maíz 1000 x 20</td><td>20190</td><td>20290</td></tr>
+  </table>
+  </div>
+
+  </ng-container>
+
+  <!-- FIRMA -->
+  <div class="bg-white shadow-card rounded-xl p-4">
+    <div class="max-w-xs">
+      <div class="text-xs font-mono font-bold uppercase tracking-wide text-slate-500 mb-1">Firma del Operario:</div>
+
+      <div *ngIf="firmaAutomatica" class="h-20 border-2 border-brand-green/40 rounded-lg flex items-center justify-center bg-brand-green-50">
+        <img [src]="firma_data" alt="Firma del operario" class="max-h-full max-w-full object-contain">
+      </div>
+      <div *ngIf="firmaAutomatica" class="text-[9px] text-brand-green font-bold mt-0.5 no-print">
+         Firma registrada de tu cuenta
+      </div>
+
+      <div *ngIf="!firmaAutomatica && !cargandoFirma" class="h-20 border-2 border-dashed border-brand-gold/50 rounded-lg flex items-center justify-center bg-brand-gold-50">
+        <span class="text-[10px] text-slate-500 italic px-2 text-center">La firma aparecerá aquí una vez esté registrada</span>
+      </div>
+      <div *ngIf="!firmaAutomatica && !cargandoFirma" class="text-[9px] text-brand-gold-dark font-bold mt-0.5 no-print">
+         Todavía no tienes una firma registrada — pide al administrador que suba tu firma escaneada.
+      </div>
+
+      <div *ngIf="cargandoFirma" class="h-20 border-2 border-slate-200 rounded-lg flex items-center justify-center bg-slate-50">
+        <span class="text-[10px] text-slate-400">Buscando tu firma registrada...</span>
+      </div>
+    </div>
+  </div>
+
+  </div> <!-- fin del envoltorio de solo lectura -->
+  </div>
+  </div>
+</div>

@@ -1,0 +1,1839 @@
+<div class="min-h-screen bg-gray-100">
+
+  <!-- HEADER -->
+  <header class="bg-brand-blue text-white px-6 py-3 flex justify-between items-center shadow-sm sticky top-0 z-30">
+    <div class="flex items-center gap-3">
+      <img src="assets/logo.png" alt="Molinos del Atlántico" class="h-9 w-auto brightness-0 invert">
+      <div>
+        <h1 class="text-base font-bold uppercase tracking-wide">Molinos del Atlántico S.A.S.</h1>
+        <p class="text-[11px] text-blue-200 font-mono">Panel Administrativo · {{ nombreAdmin }}</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <!-- Campanita de notificaciones — visible desde cualquier pestaña -->
+      <div class="relative">
+        <button (click)="toggleNotificaciones()" class="relative px-3 py-2 hover:bg-brand-blue-dark rounded transition-colors text-[11px] font-bold uppercase tracking-wide">
+          Notificaciones
+          <span *ngIf="notificaciones.length > 0"
+            class="absolute -top-1.5 -right-1.5 bg-brand-red text-white text-[10px] font-black rounded-full w-5 h-5 flex items-center justify-center">
+            {{ notificaciones.length > 9 ? '9+' : notificaciones.length }}
+          </span>
+        </button>
+
+        <!-- Panel desplegable -->
+        <div *ngIf="mostrandoNotificaciones" class="absolute right-0 mt-2 w-96 bg-white text-gray-800 rounded-xl shadow-2xl border border-gray-300 z-50 max-h-[500px] overflow-y-auto">
+          <div class="p-3 border-b border-gray-200 font-black text-sm flex justify-between items-center">
+            <span>Notificaciones ({{ notificaciones.length }})</span>
+            <button (click)="cargarNotificaciones()" class="text-[10px] text-brand-blue font-bold">Actualizar</button>
+          </div>
+
+          <div *ngIf="cargandoNotificaciones" class="p-6 text-center text-xs text-gray-400 animate-pulse">Cargando...</div>
+          <div *ngIf="!cargandoNotificaciones && notificaciones.length === 0" class="p-6 text-center text-xs text-gray-400">
+             No hay nada pendiente
+          </div>
+
+          <div *ngFor="let n of notificaciones" class="p-3 border-b border-gray-100 hover:bg-gray-50">
+            <div class="flex justify-between items-start gap-2 mb-1">
+              <span [class]="'text-[9px] font-bold px-2 py-0.5 rounded-full ' +
+                (n.tipo === 'PREVENTIVO' ? 'bg-brand-blue-50 text-brand-blue' : 'bg-amber-100 text-amber-700')">
+                {{ n.tipo === 'PREVENTIVO'? 'Preventivo': 'Reporte'}}
+              </span>
+              <span [class]="'text-[9px] font-bold px-2 py-0.5 rounded-full ' +
+                (n.prioridad_o_estado === 'CRITICA' || n.prioridad_o_estado === 'VENCIDO' ? 'bg-red-100 text-red-700' :
+                 n.prioridad_o_estado === 'ALTA' ? 'bg-brand-gold-50 text-brand-gold-dark' : 'bg-gray-100 text-gray-600')">
+                {{ n.prioridad_o_estado }}
+              </span>
+            </div>
+            <div class="text-xs font-bold text-brand-blue mb-0.5">Máquina {{ n.maquina }}</div>
+            <div class="text-xs text-gray-700 mb-2">{{ n.descripcion }}</div>
+            <div class="flex justify-between items-center">
+              <span class="text-[10px] text-gray-400">{{ n.fecha }}</span>
+              <button *ngIf="n.tipo === 'SOLICITUD'" (click)="abrirModalResolverSolicitud(n)"
+                class="text-[10px] px-2 py-1 bg-white text-brand-blue border border-brand-blue/30 rounded font-bold hover:bg-brand-blue-50">
+                Resolver
+              </button>
+              <button *ngIf="n.tipo === 'PREVENTIVO'" (click)="irAMantenimiento()"
+                class="text-[10px] px-2 py-1 bg-white text-brand-blue border border-brand-blue/30 rounded font-bold hover:bg-brand-blue-50">
+                Ir a Mantenimiento
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button (click)="logout()" class="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-[11px] font-bold uppercase tracking-wide rounded">
+        Cerrar Sesión
+      </button>
+    </div>
+  </header>
+
+      <!-- MODAL: Panel de Planillas encontradas (Bobinas/Rotulado/Pesos) -->
+      <div *ngIf="mostrandoPanelPlanillas" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl border border-gray-300 p-6 w-full max-w-sm">
+          <div class="text-sm font-black text-gray-800 mb-1">Planillas de este Turno</div>
+          <div class="text-xs text-gray-500 mb-4">Haz clic en cada una para abrirla en una pestaña nueva.</div>
+
+          <div class="space-y-2 mb-4">
+            <button *ngFor="let p of planillasEncontradas" (click)="abrirPlanilla(p)"
+              class="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 hover:bg-brand-blue-50 border border-gray-200 rounded-lg text-left transition-colors">
+              <span class="text-xs font-bold text-gray-700">{{ p.label }}</span>
+              <span class="text-brand-blue text-xs font-bold">Abrir →</span>
+            </button>
+          </div>
+
+          <p *ngIf="planillasEncontradas.length <= 1" class="text-[10px] text-amber-600 font-bold mb-4">
+             Solo se encontró Bobinas — puede que Rotulado y/o Pesos no se hayan guardado para este turno.
+          </p>
+
+          <div class="flex justify-end">
+            <button (click)="cerrarPanelPlanillas()" class="px-4 py-1.5 bg-gray-100 text-gray-700 border border-gray-300 font-bold rounded-lg text-xs hover:bg-gray-200">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Resolver Solicitud de Mantenimiento (reporte de operario) -->
+      <div *ngIf="mostrandoModalResolverSolicitud" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl border border-gray-300 p-6 w-full max-w-sm">
+          <div class="text-sm font-black text-gray-800 mb-1">Resolver Reporte</div>
+          <div class="text-xs text-gray-500 mb-1">Máquina {{ solicitudAResolver?.maquina }}</div>
+          <div class="text-xs text-gray-700 bg-gray-50 rounded-lg p-2 mb-4">{{ solicitudAResolver?.descripcion }}</div>
+
+          <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">¿Qué se hizo?</label>
+          <textarea [(ngModel)]="formResolverSolicitud.resolucion_descripcion" rows="3"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3"></textarea>
+
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Costo ($)</label>
+              <input type="number" [(ngModel)]="formResolverSolicitud.costo" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Estado Resultante</label>
+              <select [(ngModel)]="formResolverSolicitud.estado_resultante" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <option value="BUENO">Bueno</option>
+                <option value="MEDIO">Medio</option>
+                <option value="MALO">Malo</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">¿Hubo Cambio de Pieza?</label>
+          <select [(ngModel)]="formResolverSolicitud.hubo_cambio" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-4">
+            <option value="SI">Sí</option>
+            <option value="NO">No</option>
+          </select>
+
+          <p class="text-[10px] text-gray-400 italic mb-4">
+            Esto queda registrado automáticamente en el Historial Correctivo.
+          </p>
+
+          <div class="flex gap-3 justify-end">
+            <button (click)="cerrarModalResolverSolicitud()" class="px-4 py-1.5 bg-gray-100 text-gray-700 border border-gray-300 font-bold rounded-lg text-xs hover:bg-gray-200">
+              Cancelar
+            </button>
+            <button (click)="resolverSolicitud()" [disabled]="resolviendoSolicitud" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-lg text-xs shadow">
+              {{ resolviendoSolicitud ? 'Guardando...' : 'Marcar Resuelto' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+
+  <div class="flex items-start">
+
+    <!-- SIDEBAR -->
+    <aside class="w-20 flex-shrink-0 bg-white border-r border-gray-200 min-h-screen py-3">
+      <nav class="flex flex-col items-center gap-1 px-1">
+        <button *ngFor="let t of [
+          {key:'dashboard', label:'Dashboard', icon:'dashboard'},
+          {key:'monitor', label:'Monitor', icon:'monitor'},
+          {key:'informes', label:'Informes', icon:'assessment'},
+          {key:'mantenimiento', label:'Mtto.', icon:'build'},
+          {key:'crear-salida', label:'Bodega', icon:'warehouse'},
+          {key:'usuarios', label:'Usuarios', icon:'group'}
+        ]" (click)="tab = t.key"
+          [class]="'w-16 h-14 flex flex-col items-center justify-center rounded transition-colors ' +
+          (tab === t.key ? 'bg-brand-blue text-white' : 'text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue')">
+          <span class="material-symbols-outlined text-[22px]">{{ t.icon }}</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight truncate max-w-full px-0.5">{{ t.label }}</span>
+        </button>
+
+        <!-- Pantallas de rol (Calidad/Mermas/OEE/Trazabilidad) — no son
+             pestañas del panel admin en sí, pero el administrador también
+             puede entrar (ver auth.guard.ts), así que van en la misma barra.
+             Pesos Enfardadora y Estibas se quitaron de aquí a petición
+             (2026-09-17) — los componentes y rutas siguen existiendo. -->
+        <div class="w-8 h-px bg-gray-200 my-2"></div>
+        <a routerLink="/calidad" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">biotech</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Calidad</span>
+        </a>
+        <a routerLink="/mermas" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">trending_down</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Mermas</span>
+        </a>
+        <a routerLink="/oee" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">speed</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">OEE</span>
+        </a>
+        <a routerLink="/trazabilidad" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">route</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Traza.</span>
+        </a>
+      </nav>
+    </aside>
+
+  <div class="flex-1 p-6 max-w-7xl">
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         TAB DASHBOARD
+    ════════════════════════════════════════════════════════════════════════ -->
+    <div *ngIf="tab === 'dashboard'">
+
+      <!-- Cargando -->
+      <div *ngIf="cargandoDashboard" class="flex justify-center items-center py-20">
+        <div class="text-brand-blue font-bold text-sm animate-pulse">Cargando datos del panel...</div>
+      </div>
+
+      <div *ngIf="!cargandoDashboard && dashboard">
+
+        <!-- Encabezado de sección -->
+        <div class="flex flex-col md:flex-row md:justify-between md:items-end gap-2 mb-4 pb-4 border-b border-gray-200">
+          <div>
+            <h2 class="text-lg font-black text-gray-800">Panel de Control General</h2>
+            <p class="text-xs text-gray-400">{{ fechaHoyFormateada }}</p>
+          </div>
+          <div class="h-0.5 w-24 bg-brand-blue rounded-full hidden md:block"></div>
+        </div>
+
+        <!-- Sub-navegación del Dashboard -->
+        <div class="flex gap-2 mb-6 flex-wrap">
+          <button *ngFor="let s of [
+            {key:'resumen', label:'Resumen'},
+            {key:'produccion', label:'Producción'},
+            {key:'calidad', label:'Calidad'},
+            {key:'equipo', label:'Equipo y Proveedores'}
+          ]" (click)="dashboardSubTab = s.key"
+            [class]="'px-4 py-2 rounded-full text-xs font-bold border-2 transition-colors ' +
+            (dashboardSubTab === s.key ? 'bg-brand-blue text-white border-brand-blue' : 'bg-white text-gray-500 border-gray-200 hover:border-brand-blue/40 hover:text-brand-blue')">
+            {{ s.label }}
+          </button>
+        </div>
+
+        <!-- ══════════════════════════ RESUMEN ══════════════════════════ -->
+        <div *ngIf="dashboardSubTab === 'resumen'">
+
+        <!-- Titular del día, en lenguaje simple -->
+        <div *ngIf="insightPrincipal"
+          [class]="'rounded-xl p-4 mb-5 border-l-4 flex items-start gap-3 ' +
+          (insightPrincipal.tipo === 'good' ? 'bg-emerald-50 border-l-emerald-500' :
+           insightPrincipal.tipo === 'warning' ? 'bg-brand-gold-50 border-l-brand-gold' : 'bg-red-50 border-l-brand-red')">
+          <div>
+            <div [class]="'text-sm font-black ' + (insightPrincipal.tipo === 'good' ? 'text-emerald-800' : insightPrincipal.tipo === 'warning' ? 'text-brand-gold-dark' : 'text-brand-red')">
+              {{ insightPrincipal.titulo }}
+            </div>
+            <div class="text-xs text-gray-600 mt-0.5">{{ insightPrincipal.detalle }}</div>
+          </div>
+        </div>
+
+        <!-- ══════════ KPI CARDS ══════════ -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
+
+          <!-- Turnos hoy -->
+          <div class="bg-white rounded-xl shadow-card hover:shadow-cardHover transition-shadow border-t-4 border-t-brand-blue p-4">
+            <div class="flex justify-between items-start mb-3">
+              <span class="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wide">Turnos Hoy</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5 text-brand-blue">
+                <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
+              </svg>
+            </div>
+            <div class="text-3xl font-mono font-black text-gray-800">{{ dashboard.tarjetas.total_turnos_hoy }}</div>
+            <div class="text-[10px] text-gray-400 mt-1">registrados hoy</div>
+          </div>
+
+          <!-- Turnos mes -->
+          <div class="bg-white rounded-xl shadow-card hover:shadow-cardHover transition-shadow border-t-4 border-t-brand-blue p-4">
+            <div class="flex justify-between items-start mb-3">
+              <span class="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wide">Turnos Mes</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5 text-brand-blue">
+                <rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+              </svg>
+            </div>
+            <div class="text-3xl font-mono font-black text-gray-800">{{ dashboard.tarjetas.total_turnos_mes }}</div>
+            <div class="text-[10px] text-gray-400 mt-1">acumulado</div>
+          </div>
+
+          <!-- Kg hoy -->
+          <div class="bg-white rounded-xl shadow-card hover:shadow-cardHover transition-shadow border-t-4 border-t-gray-400 p-4">
+            <div class="flex justify-between items-start mb-3">
+              <span class="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wide">Kg Hoy</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5 text-gray-500">
+                <path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>
+              </svg>
+            </div>
+            <div class="text-3xl font-mono font-black text-gray-800">{{ dashboard.tarjetas.total_kg_consumidos_hoy | number:'1.0-0' }}</div>
+            <div class="text-[10px] text-gray-400 mt-1">empaque consumido</div>
+          </div>
+
+          <!-- % Desperdicio -->
+          <div [class]="'bg-white rounded-xl shadow-card hover:shadow-cardHover transition-shadow border-t-4 p-4 ' +
+            (dashboard.tarjetas.promedio_desperdicio_pct > dashboard.meta_desperdicio_pct ? 'border-t-brand-red' : 'border-t-emerald-500')">
+            <div class="flex justify-between items-start mb-3">
+              <span class="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wide">% Desperdicio</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                [class]="'w-5 h-5 ' + (dashboard.tarjetas.promedio_desperdicio_pct > dashboard.meta_desperdicio_pct ? 'text-brand-red' : 'text-emerald-600')">
+                <path d="M12 2L1 21h22L12 2z"/><path d="M12 9v5"/><circle cx="12" cy="17" r="0.7" fill="currentColor"/>
+              </svg>
+            </div>
+            <div [class]="'text-3xl font-black ' + (dashboard.tarjetas.promedio_desperdicio_pct > dashboard.meta_desperdicio_pct ? 'text-brand-red' : 'text-emerald-600')">
+              {{ dashboard.tarjetas.promedio_desperdicio_pct | number:'1.1-1' }}%
+            </div>
+            <div class="text-[10px] mt-1"
+              [class]="dashboard.tarjetas.promedio_desperdicio_pct > dashboard.meta_desperdicio_pct ? 'text-brand-red font-bold' : 'text-gray-400'">
+              meta: {{ dashboard.meta_desperdicio_pct }}%
+            </div>
+          </div>
+
+          <!-- Fechados que no cumplen -->
+          <div [class]="'bg-white rounded-xl shadow-card hover:shadow-cardHover transition-shadow border-t-4 p-4 ' +
+            (dashboard.tarjetas.fechados_no_cumplen_hoy > 0 ? 'border-t-brand-red' : 'border-t-emerald-500')">
+            <div class="flex justify-between items-start mb-3">
+              <span class="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wide">Fechados</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                [class]="'w-5 h-5 ' + (dashboard.tarjetas.fechados_no_cumplen_hoy > 0 ? 'text-brand-red' : 'text-emerald-600')">
+                <circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>
+              </svg>
+            </div>
+            <div [class]="'text-3xl font-black ' + (dashboard.tarjetas.fechados_no_cumplen_hoy > 0 ? 'text-brand-red' : 'text-emerald-600')">
+              {{ dashboard.tarjetas.fechados_no_cumplen_hoy }}
+            </div>
+            <div class="text-[10px] text-gray-400 mt-1">no cumplen hoy</div>
+          </div>
+
+          <!-- Operarios activos -->
+          <div class="bg-white rounded-xl shadow-card hover:shadow-cardHover transition-shadow border-t-4 border-t-brand-blue p-4">
+            <div class="flex justify-between items-start mb-3">
+              <span class="text-[10px] font-mono font-bold text-gray-400 uppercase tracking-wide">Máquinas Hoy</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5 text-brand-blue">
+                <rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>
+              </svg>
+            </div>
+            <div class="text-3xl font-mono font-black text-gray-800">{{ dashboard.tarjetas.maquinas_activas_hoy }}</div>
+            <div class="text-[10px] text-gray-400 mt-1">con registro hoy</div>
+          </div>
+
+        </div>
+
+        <!-- Alertas activas (producción) -->
+        <div *ngIf="dashboard.alertas && dashboard.alertas.length > 0" class="mb-5">
+          <div *ngFor="let a of dashboard.alertas"
+            [class]="'border rounded-xl px-4 py-2.5 mb-2 flex items-center gap-2 text-xs font-semibold ' + severidadColor(a.severidad)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 flex-shrink-0">
+              <path d="M12 2L1 21h22L12 2z"/><path d="M12 9v5"/><circle cx="12" cy="17" r="0.7" fill="currentColor"/>
+            </svg>
+            <span>{{ a.mensaje }}</span>
+          </div>
+        </div>
+
+        <!-- Alertas de inventario de bodega (cobertura crítica o baja) -->
+        <div *ngIf="!cargandoAlertasInventario && alertasInventario.length > 0" class="bg-white rounded-xl shadow-card border-l-4 border-l-brand-red p-5 mb-5">
+          <div class="flex justify-between items-center mb-3">
+            <div class="flex items-center gap-2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 text-brand-red">
+                <path d="M12 2L1 21h22L12 2z"/><path d="M12 9v5"/><circle cx="12" cy="17" r="0.7" fill="currentColor"/>
+              </svg>
+              <h3 class="text-sm font-black text-gray-800">Alertas de Inventario — Bodega</h3>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div *ngFor="let i of alertasInventario.slice(0, 6)"
+              class="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-gray-50 border border-gray-100">
+              <div class="min-w-0">
+                <div class="text-xs font-bold text-gray-800 truncate">{{ i.descripcion }}</div>
+                <div class="text-[10px] text-gray-400">{{ i.codigo }} · {{ i.saldo_kg | number:'1.0-0' }} kg en bodega</div>
+              </div>
+              <div class="text-right flex-shrink-0">
+                <span [class]="'text-[10px] font-bold px-2 py-0.5 rounded-full ' + coberturaColor(i.estado_cobertura)">
+                  {{ i.cobertura_dias }} días
+                </span>
+              </div>
+            </div>
+          </div>
+          <div *ngIf="alertasInventario.length > 6" class="text-[10px] text-gray-400 mt-3 text-center">
+            +{{ alertasInventario.length - 6 }} referencia(s) más en cobertura crítica o baja
+          </div>
+        </div>
+
+        <div *ngIf="!cargandoAlertasInventario && alertasInventario.length === 0" class="bg-white rounded-xl shadow-card border-l-4 border-l-emerald-500 p-4 mb-5 flex items-center gap-2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 text-emerald-600">
+            <circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>
+          </svg>
+          <span class="text-xs font-bold text-gray-700">Inventario de bodega dentro de niveles normales — sin referencias en cobertura crítica.</span>
+        </div>
+
+        <!-- FILA 1: Tendencia diaria (SVG) + Gauge desperdicio -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+
+          <!-- Producción diaria — gráfico de área -->
+          <div class="lg:col-span-2 bg-white rounded-xl shadow-card p-5">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-sm font-black text-gray-800">Producción Diaria — Últimos 14 Días</h3>
+              <span class="text-[10px] font-bold text-gray-400 uppercase">Kg consumidos</span>
+            </div>
+            <div *ngIf="dashboard.tendencia_diaria.length === 0" class="text-center py-10 text-gray-400 text-xs">
+              Sin datos disponibles
+            </div>
+            <svg *ngIf="dashboard.tendencia_diaria.length > 0" viewBox="0 0 700 200" class="w-full h-48">
+              <!-- líneas guía -->
+              <line x1="0" y1="50" x2="700" y2="50" stroke="#EEF3FC" stroke-width="1"/>
+              <line x1="0" y1="100" x2="700" y2="100" stroke="#EEF3FC" stroke-width="1"/>
+              <line x1="0" y1="150" x2="700" y2="150" stroke="#EEF3FC" stroke-width="1"/>
+              <line x1="0" y1="175" x2="700" y2="175" stroke="#E5E7EB" stroke-width="1"/>
+
+              <!-- área -->
+              <defs>
+                <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#0B3D91" stop-opacity="0.28"/>
+                  <stop offset="100%" stop-color="#0B3D91" stop-opacity="0.02"/>
+                </linearGradient>
+              </defs>
+              <path [attr.d]="areaTendenciaPath()" fill="url(#areaFill)"/>
+
+              <!-- línea -->
+              <path [attr.d]="lineaTendenciaPath()" fill="none" stroke="#0B3D91" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round"/>
+
+              <!-- puntos + tooltip -->
+              <g *ngFor="let p of puntosTendenciaCoords()">
+                <circle [attr.cx]="p.x" [attr.cy]="p.y" r="4" fill="#0B3D91"/>
+                <circle [attr.cx]="p.x" [attr.cy]="p.y" r="9" fill="transparent" class="cursor-pointer">
+                  <title>{{ p.fecha }}: {{ p.kg | number:'1.0-0' }} kg</title>
+                </circle>
+              </g>
+            </svg>
+            <div class="flex justify-between text-[9px] text-gray-400 mt-1 px-1"
+              *ngIf="dashboard.tendencia_diaria.length > 0">
+              <span>{{ fechaCorta(dashboard.tendencia_diaria[0].fecha) }}</span>
+              <span>{{ fechaCorta(dashboard.tendencia_diaria[dashboard.tendencia_diaria.length - 1].fecha) }}</span>
+            </div>
+          </div>
+
+          <!-- Gauge cumplimiento meta -->
+          <div class="bg-white rounded-xl shadow-card p-5 flex flex-col items-center justify-center">
+            <h3 class="text-sm font-black text-gray-800 mb-4 self-start">Cumplimiento de Meta</h3>
+            <div class="relative w-32 h-32">
+              <div class="w-32 h-32 rounded-full" [style.background]="donutBackground()"></div>
+              <div class="absolute inset-2 bg-white rounded-full flex flex-col items-center justify-center">
+                <span [class]="'text-2xl font-black ' + donutColorClass()">
+                  {{ dashboard.tarjetas.promedio_desperdicio_pct | number:'1.1-1' }}%
+                </span>
+                <span class="text-[9px] text-gray-400 font-bold uppercase">Desperdicio</span>
+              </div>
+            </div>
+            <div class="text-[10px] text-gray-400 mt-3 text-center">
+              Meta establecida: <span class="font-bold text-gray-600">{{ dashboard.meta_desperdicio_pct }}%</span>
+            </div>
+          </div>
+
+        </div>
+
+        </div>
+
+        <!-- ══════════════════════════ PRODUCCIÓN ══════════════════════════ -->
+        <div *ngIf="dashboardSubTab === 'produccion'" class="space-y-5">
+
+          <!-- Comparativo por turno (nuevo) -->
+          <div class="bg-white rounded-xl shadow-card p-5">
+            <h3 class="text-sm font-black text-gray-800 mb-1">Desperdicio Promedio por Turno</h3>
+            <p class="text-[10px] text-gray-400 mb-4">Últimos {{ analitica?.dias_analizados || 30 }} días · compara si algún turno desperdicia más que los otros</p>
+            <div *ngIf="cargandoAnalitica" class="text-center py-6 text-gray-400 text-xs animate-pulse">Calculando...</div>
+            <div *ngIf="!cargandoAnalitica" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div *ngFor="let t of resumenPorTurno" class="rounded-xl border-2 p-4 text-center"
+                [class]="t.turnos === 0 ? 'border-gray-100 bg-gray-50' : (t.pct > (analitica?.meta_desperdicio_pct || 3) ? 'border-brand-red/30 bg-red-50' : 'border-emerald-200 bg-emerald-50')">
+                <div class="text-[10px] font-black text-gray-500 uppercase mb-2">
+                  {{ t.turno === 'T1' ? 'Turno 1 · 6am-2pm' : t.turno === 'T2' ? 'Turno 2 · 2pm-10pm' : 'Turno 3 · 10pm-6am' }}
+                </div>
+                <div class="text-3xl font-black" [class]="t.turnos === 0 ? 'text-gray-300' : (t.pct > (analitica?.meta_desperdicio_pct || 3) ? 'text-brand-red' : 'text-emerald-700')">
+                  {{ t.turnos === 0 ? '—' : (t.pct + '%') }}
+                </div>
+                <div class="text-[10px] text-gray-400 mt-1">{{ t.turnos }} turno(s) analizados</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Producción por máquina -->
+          <div class="bg-white rounded-xl shadow-card p-5">
+            <h3 class="text-sm font-black text-gray-800 mb-4">Producción por Máquina — Mes Actual</h3>
+            <div *ngIf="dashboard.produccion_por_maquina.length === 0" class="text-center py-6 text-gray-400 text-xs">
+              Sin datos este mes
+            </div>
+            <div *ngFor="let m of dashboard.produccion_por_maquina" class="mb-3">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-black text-gray-700">Máq. {{ m.maquina }}</span>
+                <span class="text-[10px] text-gray-500">{{ m.total_kg | number:'1.1-1' }} Kg · {{ m.total_unidades | number }} Unid. · {{ m.turnos }} turnos</span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-4">
+                <div class="bg-brand-blue h-4 rounded-full transition-all duration-500 flex items-center justify-end pr-2"
+                  [style.width.%]="anchoBarra(m.total_kg)">
+                  <span class="text-[9px] text-white font-bold" *ngIf="anchoBarra(m.total_kg) > 15">{{ m.total_kg | number:'1.0-0' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Últimos Registros -->
+          <div class="bg-white rounded-xl shadow-card p-5">
+            <h3 class="text-sm font-black text-gray-800 mb-4">Últimos Registros</h3>
+            <div *ngIf="dashboard.ultimos_registros.length === 0" class="text-center py-6 text-gray-400 text-xs">
+              Sin registros
+            </div>
+            <div *ngFor="let r of dashboard.ultimos_registros"
+              class="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+              <span [class]="'px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ' +
+                (r.tipo === 'Bobinas' ? 'bg-brand-blue text-white' : r.tipo === 'Pesos' ? 'bg-brand-gold text-gray-900' : 'bg-emerald-100 text-emerald-700')">
+                {{ r.tipo }}
+              </span>
+              <div class="flex-1 min-w-0">
+                <div class="text-xs font-bold text-gray-800 truncate">{{ r.operario }}</div>
+                <div class="text-[10px] text-gray-400">Máq. {{ r.maquina }} · {{ r.fecha }}</div>
+              </div>
+              <span *ngIf="r.turno" [class]="'text-[10px] font-bold px-1.5 py-0.5 rounded ' + turnoColor(r.turno)">
+                {{ r.turno }}
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ══════════════════════════ CALIDAD ══════════════════════════ -->
+        <div *ngIf="dashboardSubTab === 'calidad'" class="space-y-5">
+
+          <!-- Fechados semana -->
+          <div class="bg-white rounded-xl shadow-card p-5">
+            <h3 class="text-sm font-black text-gray-800 mb-4">Fechados — Últimos 7 Días</h3>
+            <div *ngFor="let dia of diasSemana" class="mb-3">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-[11px] font-bold text-gray-600">{{ dia }}</span>
+                <span class="text-[10px] text-gray-400">
+                  Cumplen {{ dashboard.fechados_semana[dia].cumplen }} · No cumplen {{ dashboard.fechados_semana[dia].no_cumplen }}
+                </span>
+              </div>
+              <div class="w-full bg-gray-100 rounded-full h-3 flex overflow-hidden">
+                <div class="bg-emerald-500 h-3 transition-all"
+                  [style.width.%]="(dashboard.fechados_semana[dia].cumplen /
+                    ((dashboard.fechados_semana[dia].cumplen + dashboard.fechados_semana[dia].no_cumplen) || 1)) * 100">
+                </div>
+                <div class="bg-brand-red h-3 transition-all"
+                  [style.width.%]="(dashboard.fechados_semana[dia].no_cumplen /
+                    ((dashboard.fechados_semana[dia].cumplen + dashboard.fechados_semana[dia].no_cumplen) || 1)) * 100">
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div *ngIf="!cargandoDashboard && !dashboard" class="text-center py-16 text-gray-400">
+        <div class="font-bold">No se pudieron cargar los datos del dashboard</div>
+        <button (click)="cargarDashboard()" class="mt-4 px-4 py-2 bg-brand-blue text-white text-xs font-bold rounded-lg">
+          Reintentar
+        </button>
+      </div>
+
+      <div *ngIf="cargandoAnalitica" class="text-center py-10 text-gray-400 text-xs animate-pulse">
+        Calculando analítica avanzada...
+      </div>
+
+      <ng-container *ngIf="!cargandoAnalitica && analitica">
+
+        <!-- Ranking de operarios -->
+        <div *ngIf="dashboardSubTab === 'equipo'" class="bg-white rounded-xl shadow-card p-5 mb-5">
+              <h3 class="text-sm font-black text-gray-800 mb-1">Ranking de Operarios</h3>
+              <p class="text-[10px] text-gray-400 mb-4">Últimos {{ analitica.dias_analizados }} días · solo operarios con 2+ turnos registrados</p>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div>
+                  <div class="text-[11px] font-black text-emerald-700 uppercase mb-2">Menor desperdicio</div>
+                  <div *ngFor="let r of analitica.ranking_operarios.mejores_desperdicio; let i = index"
+                    class="flex items-center gap-2 py-1.5 border-b border-gray-100 text-xs">
+                    <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black flex items-center justify-center flex-shrink-0">{{ i + 1 }}</span>
+                    <span class="font-bold text-gray-700 flex-1 truncate">{{ r.operario }}</span>
+                    <span class="text-emerald-700 font-black">{{ r.pct_desperdicio_promedio }}%</span>
+                  </div>
+                  <div *ngIf="!analitica.ranking_operarios.mejores_desperdicio.length" class="text-[10px] text-gray-400 italic py-2">Sin datos suficientes</div>
+                </div>
+                <div>
+                  <div class="text-[11px] font-black text-brand-red uppercase mb-2">Mayor desperdicio</div>
+                  <div *ngFor="let r of analitica.ranking_operarios.peores_desperdicio; let i = index"
+                    class="flex items-center gap-2 py-1.5 border-b border-gray-100 text-xs">
+                    <span class="w-5 h-5 rounded-full bg-red-100 text-brand-red text-[10px] font-black flex items-center justify-center flex-shrink-0">{{ i + 1 }}</span>
+                    <span class="font-bold text-gray-700 flex-1 truncate">{{ r.operario }}</span>
+                    <span class="text-brand-red font-black">{{ r.pct_desperdicio_promedio }}%</span>
+                  </div>
+                  <div *ngIf="!analitica.ranking_operarios.peores_desperdicio.length" class="text-[10px] text-gray-400 italic py-2">Sin datos suficientes</div>
+                </div>
+                <div>
+                  <div class="text-[11px] font-black text-brand-blue uppercase mb-2">Más productivos</div>
+                  <div *ngFor="let r of analitica.ranking_operarios.mas_productivos" class="mb-2">
+                    <div class="flex justify-between text-xs mb-0.5">
+                      <span class="font-bold text-gray-700 truncate">{{ r.operario }}</span>
+                      <span class="text-brand-blue font-black">{{ r.kg_totales | number:'1.0-0' }} kg</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-1.5">
+                      <div class="h-1.5 rounded-full bg-brand-blue" [style.width.%]="(r.kg_totales / maxKgProductivo) * 100"></div>
+                    </div>
+                  </div>
+                  <div *ngIf="!analitica.ranking_operarios.mas_productivos.length" class="text-[10px] text-gray-400 italic py-2">Sin datos suficientes</div>
+                </div>
+              </div>
+              <p class="text-[9px] text-gray-400 mt-3 italic">
+                Nota: este ranking es una herramienta de gestión, no un juicio individual — conviene revisarlo junto con el contexto de cada turno (tipo de referencia, máquina, novedades) antes de sacar conclusiones.
+              </p>
+            </div>
+
+            <!-- Desperdicio por referencia -->
+            <div *ngIf="dashboardSubTab === 'calidad'" class="bg-white rounded-xl shadow-card p-5 mb-5">
+              <h3 class="text-sm font-black text-gray-800 mb-1">Desperdicio por Referencia de Producto</h3>
+              <p class="text-[10px] text-gray-400 mb-4">Últimos {{ analitica.dias_analizados }} días · ordenado de mayor a menor % de desperdicio</p>
+              <div class="space-y-2">
+                <div *ngFor="let r of analitica.desperdicio_por_referencia" class="text-xs">
+                  <div class="flex justify-between mb-0.5">
+                    <span class="font-bold text-gray-700 truncate max-w-[70%]">{{ r.referencia }}</span>
+                    <span [class]="r.pct_desperdicio > analitica.meta_desperdicio_pct ? 'text-brand-red font-black' : 'text-emerald-700 font-black'">
+                      {{ r.pct_desperdicio }}%
+                    </span>
+                  </div>
+                  <div class="w-full bg-gray-100 rounded-full h-2">
+                    <div class="h-2 rounded-full"
+                      [class]="r.pct_desperdicio > analitica.meta_desperdicio_pct ? 'bg-brand-red' : 'bg-emerald-500'"
+                      [style.width.%]="(r.kg_consumidos / maxKgReferencia) * 100">
+                    </div>
+                  </div>
+                </div>
+                <div *ngIf="!analitica.desperdicio_por_referencia.length" class="text-center text-gray-400 text-xs py-6">Sin datos en este periodo</div>
+              </div>
+            </div>
+
+            <!-- Histórico mensual -->
+            <div *ngIf="dashboardSubTab === 'produccion'" class="bg-white rounded-xl shadow-card p-5">
+              <h3 class="text-sm font-black text-gray-800 mb-1">Histórico Mensual — Cumplimiento de Meta</h3>
+              <p class="text-[10px] text-gray-400 mb-4">Meta de desperdicio: {{ analitica.meta_desperdicio_pct }}% · últimos 6 meses</p>
+              <div class="flex items-end gap-3 h-40">
+                <div *ngFor="let m of analitica.historico_mensual" class="flex-1 flex flex-col items-center justify-end h-full">
+                  <span *ngIf="m.variacion_kg_pct !== null" class="text-[9px] font-bold mb-0.5"
+                    [class]="m.variacion_kg_pct >= 0 ? 'text-brand-blue' : 'text-gray-400'">
+                    {{ m.variacion_kg_pct >= 0 ? '▲' : '▼' }} {{ m.variacion_kg_pct | number:'1.0-1' }}%
+                  </span>
+                  <span class="text-[10px] font-black mb-1" [class]="m.cumple_meta ? 'text-emerald-700' : 'text-brand-red'">{{ m.pct_desperdicio }}%</span>
+                  <div class="w-full rounded-t-md" [class]="m.cumple_meta ? 'bg-emerald-400' : 'bg-brand-red'"
+                    [style.height.%]="Math.max(6, (m.kg_consumidos / maxKgHistorico) * 100)">
+                  </div>
+                  <span class="text-[9px] text-gray-500 font-bold mt-1">{{ m.mes }}</span>
+                  <span class="text-[8px] text-gray-400">{{ m.turnos }} turnos</span>
+                </div>
+              </div>
+              <p class="text-[9px] text-gray-400 mt-3 italic">La flecha arriba de cada barra compara los Kg consumidos de ese mes contra el mes inmediatamente anterior.</p>
+            </div>
+
+            <!-- Cumplimiento de Pesos -->
+            <div *ngIf="dashboardSubTab === 'calidad'" class="bg-white rounded-xl shadow-card p-5 mb-5">
+              <h3 class="text-sm font-black text-gray-800 mb-1">Cumplimiento de Control de Peso</h3>
+              <p class="text-[10px] text-gray-400 mb-4">Últimos {{ analitica.dias_analizados }} días · muestras dentro del rango permitido (500-508g / 1000-1015g)</p>
+              <div class="flex items-center gap-6">
+                <div class="relative w-24 h-24 flex-shrink-0">
+                  <svg viewBox="0 0 36 36" class="w-24 h-24 -rotate-90">
+                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f3f4f6" stroke-width="4"></circle>
+                    <circle cx="18" cy="18" r="15.9" fill="none"
+                      [attr.stroke]="analitica.cumplimiento_pesos.pct_dentro_rango >= 95 ? '#10b981' : '#D02020'"
+                      stroke-width="4" stroke-linecap="round"
+                      [attr.stroke-dasharray]="analitica.cumplimiento_pesos.pct_dentro_rango + ', 100'">
+                    </circle>
+                  </svg>
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="text-lg font-black text-gray-800">{{ analitica.cumplimiento_pesos.pct_dentro_rango }}%</span>
+                  </div>
+                </div>
+                <div class="text-xs space-y-1">
+                  <div><span class="font-black text-emerald-700">{{ analitica.cumplimiento_pesos.dentro_rango }}</span> muestras dentro de rango</div>
+                  <div><span class="font-black text-brand-red">{{ analitica.cumplimiento_pesos.fuera_rango }}</span> muestras fuera de rango</div>
+                  <div class="text-gray-400">{{ analitica.cumplimiento_pesos.total_muestras }} muestras en total</div>
+                </div>
+              </div>
+              <div *ngIf="analitica.cumplimiento_pesos.total_muestras === 0" class="text-center text-gray-400 text-xs py-6">
+                Sin muestras de peso registradas en este periodo
+              </div>
+            </div>
+
+            <!-- Heatmap turno x día de la semana -->
+            <div *ngIf="dashboardSubTab === 'calidad'" class="bg-white rounded-xl shadow-card p-5">
+              <h3 class="text-sm font-black text-gray-800 mb-1">Mapa de Calor — % Desperdicio por Turno y Día</h3>
+              <p class="text-[10px] text-gray-400 mb-4">Últimos {{ analitica.dias_analizados }} días · detecta si algún turno o día tiende a desperdiciar más</p>
+              <div class="overflow-x-auto">
+                <table class="w-full text-[10px] text-center">
+                  <thead>
+                    <tr>
+                      <th class="text-left px-2 py-1 text-gray-500 font-bold">TURNO</th>
+                      <th *ngFor="let d of diasSemanaHeatmap" class="px-2 py-1 text-gray-500 font-bold">{{ d.slice(0,3) }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let t of ['T1','T2','T3']">
+                      <td class="text-left px-2 py-1 font-bold text-gray-600">{{ t }}</td>
+                      <td *ngFor="let d of diasSemanaHeatmap" class="p-1">
+                        <div [class]="'rounded px-1 py-1.5 font-bold ' + colorHeatmap(celdaHeatmap(d, t)?.pct_desperdicio_promedio ?? 0, celdaHeatmap(d, t)?.turnos ?? 0)">
+                          {{ celdaHeatmap(d, t) ? (celdaHeatmap(d, t)!.pct_desperdicio_promedio + '%') : '—' }}
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="text-[9px] text-gray-400 mt-3 italic">Celdas grises: sin turnos registrados en esa combinación durante el periodo.</p>
+            </div>
+
+          </ng-container>
+
+      <div *ngIf="cargandoProveedores" class="text-center py-10 text-gray-400 text-xs animate-pulse">
+        Calculando rendimiento por proveedor...
+      </div>
+
+      <ng-container *ngIf="!cargandoProveedores && resumenProveedores">
+
+            <!-- Tarjetas destacadas -->
+            <div *ngIf="dashboardSubTab === 'equipo'" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="bg-white rounded-xl shadow-card p-4 border-t-4 border-t-brand-blue">
+                <div class="text-[10px] font-bold text-gray-400 uppercase">Mayor Consumo</div>
+                <div class="text-lg font-black text-brand-blue">{{ resumenProveedores.mayor_consumo || '—' }}</div>
+              </div>
+              <div class="bg-white rounded-xl shadow-card p-4 border-t-4 border-t-gray-300">
+                <div class="text-[10px] font-bold text-gray-400 uppercase">Menor Consumo</div>
+                <div class="text-lg font-black text-gray-600">{{ resumenProveedores.menor_consumo || '—' }}</div>
+              </div>
+              <div class="bg-white rounded-xl shadow-card p-4 border-t-4 border-t-emerald-400">
+                <div class="text-[10px] font-bold text-gray-400 uppercase">Mejor Rendimiento</div>
+                <div class="text-lg font-black text-emerald-600">{{ resumenProveedores.mejor_rendimiento || '—' }}</div>
+                <div class="text-[9px] text-gray-400">menor % de desperdicio</div>
+              </div>
+              <div class="bg-white rounded-xl shadow-card p-4 border-t-4 border-t-brand-red">
+                <div class="text-[10px] font-bold text-gray-400 uppercase">Peor Rendimiento</div>
+                <div class="text-lg font-black text-brand-red">{{ resumenProveedores.peor_rendimiento || '—' }}</div>
+                <div class="text-[9px] text-gray-400">mayor % de desperdicio</div>
+              </div>
+            </div>
+
+            <!-- Comparativo detallado -->
+            <div *ngIf="dashboardSubTab === 'equipo'" class="bg-white rounded-xl shadow-card p-5">
+              <h3 class="text-sm font-black text-gray-800 mb-1">Comparativo de Consumo y Desperdicio</h3>
+              <p class="text-[10px] text-gray-400 mb-4">
+                El desperdicio se reparte proporcionalmente entre proveedores dentro de cada turno,
+                ya que se registra por turno completo y no por rollo individual.
+              </p>
+              <div class="space-y-3">
+                <div *ngFor="let p of resumenProveedores.proveedores">
+                  <button type="button" (click)="toggleProveedor(p.proveedor)" class="w-full text-left no-print">
+                    <div class="flex justify-between items-baseline mb-0.5">
+                      <span class="font-bold text-gray-700 text-xs">
+                        <span class="inline-block w-3 text-gray-400">{{ proveedorExpandido === p.proveedor ? '▾' : '▸' }}</span>
+                        {{ p.proveedor }}
+                      </span>
+                      <span class="text-[10px] text-gray-400">{{ p.turnos }} turnos · {{ p.referencias.length }} referencia(s)</span>
+                    </div>
+                    <div class="w-full bg-gray-100 rounded-full h-2 mb-1">
+                      <div class="h-2 rounded-full bg-brand-blue" [style.width.%]="(p.kg_consumidos / maxKgProveedor) * 100"></div>
+                    </div>
+                    <div class="flex justify-between text-[10px]">
+                      <span class="text-gray-500">{{ p.kg_consumidos | number:'1.0-0' }} kg consumidos</span>
+                      <span [class]="p.pct_desperdicio > 5 ? 'text-brand-red font-bold' : 'text-emerald-600 font-bold'">
+                        {{ p.kg_desperdicio | number:'1.0-0' }} kg desperdicio ({{ p.pct_desperdicio }}%)
+                      </span>
+                    </div>
+                  </button>
+
+                  <!-- Detalle por referencia de producto de este proveedor -->
+                  <div *ngIf="proveedorExpandido === p.proveedor" class="mt-2 ml-4 pl-3 border-l-2 border-gray-200 space-y-2">
+                    <div *ngFor="let ref of p.referencias" class="text-[10px]">
+                      <div class="flex justify-between items-baseline">
+                        <span class="font-semibold text-gray-600 truncate max-w-[60%]">{{ ref.referencia_producto }}</span>
+                        <span class="text-gray-400">{{ ref.turnos }} turno(s)</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-gray-500">{{ ref.kg_consumidos | number:'1.0-0' }} kg</span>
+                        <span [class]="ref.pct_desperdicio > 5 ? 'text-brand-red font-bold' : 'text-emerald-600 font-bold'">
+                          {{ ref.kg_desperdicio | number:'1.0-0' }} kg desp. ({{ ref.pct_desperdicio }}%)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div *ngIf="resumenProveedores.proveedores.length === 0" class="text-center text-gray-400 text-xs py-6">
+                  Sin datos todavía — aparece en cuanto se registren turnos con la referencia de empaque puesta
+                </div>
+              </div>
+            </div>
+
+          </ng-container>
+
+      <!-- Botón recargar (siempre visible, sin importar la sub-pestaña) -->
+      <div *ngIf="dashboard" class="flex justify-end mt-2 mb-6">
+        <button (click)="cargarDashboard(); cargarAnalitica(); cargarResumenProveedores()"
+          class="px-5 py-2.5 bg-brand-blue hover:bg-brand-blue-dark text-white text-xs font-bold rounded-lg shadow-card transition-colors">
+           Actualizar Dashboard
+        </button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         TAB MONITOR MÁQUINAS
+    ════════════════════════════════════════════════════════════════════════ -->
+    <div *ngIf="tab === 'monitor'">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <h2 class="text-base font-black text-gray-800">Monitor de Máquinas en Tiempo Real</h2>
+          <p class="text-xs text-gray-400">Estado actual de todas las empacadoras — actualizado al cargar</p>
+        </div>
+        <button (click)="cargarMonitor()"
+          class="px-4 py-2 bg-brand-blue hover:bg-brand-blue-dark text-white text-xs font-bold rounded-lg">
+           Actualizar
+        </button>
+      </div>
+
+      <div *ngIf="cargandoMonitor" class="flex justify-center py-12">
+        <div class="text-brand-blue font-bold animate-pulse">Cargando estado...</div>
+      </div>
+
+      <div *ngIf="!cargandoMonitor" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div *ngFor="let m of monitor"
+          [class]="'rounded-xl border-2 p-4 shadow-sm transition-all ' +
+          (m.activo ? (m.tipo === 'trigo' ? 'bg-amber-50 border-amber-400' : 'bg-blue-50 border-blue-400') :
+                      'bg-gray-50 border-gray-200')">
+
+          <!-- Encabezado máquina -->
+          <div class="flex justify-between items-center mb-3">
+            <span [class]="'text-xl font-black ' + (m.activo ? (m.tipo === 'trigo' ? 'text-amber-700' : 'text-blue-700') : 'text-gray-400')">
+              Máq. {{ m.maquina }}
+            </span>
+            <span [class]="'text-[10px] font-black px-2 py-0.5 rounded-full ' +
+              (m.activo ? 'bg-emerald-500 text-white' : 'bg-gray-200 text-gray-500')">
+              {{ m.activo ? '● ACTIVA' : '○ LIBRE' }}
+            </span>
+          </div>
+
+          <!-- Tipo -->
+          <div class="mb-2">
+            <span [class]="'text-[10px] font-bold px-2 py-0.5 rounded ' +
+              (m.tipo === 'trigo' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700')">
+              {{ m.tipo === 'trigo'? 'TRIGO': 'MAÍZ'}}
+            </span>
+          </div>
+
+          <!-- Operario -->
+          <div class="mb-1">
+            <div class="text-[10px] text-gray-400 font-bold uppercase">Operario</div>
+            <div [class]="'text-xs font-bold truncate ' + (m.activo ? 'text-gray-800' : 'text-gray-400')">
+              {{ m.operario }}
+            </div>
+          </div>
+
+          <!-- Turno -->
+          <div class="mb-1" *ngIf="m.turno_actual">
+            <div class="text-[10px] text-gray-400 font-bold uppercase">Turno</div>
+            <span [class]="'text-[10px] font-bold px-1.5 py-0.5 rounded ' + turnoColor(m.turno_actual)">
+              {{ m.turno_actual }}
+            </span>
+          </div>
+
+          <!-- Referencia -->
+          <div *ngIf="m.referencia" class="mt-2 pt-2 border-t border-gray-200">
+            <div class="text-[9px] text-gray-400 font-bold uppercase">Referencia</div>
+            <div class="text-[9px] text-gray-600 font-semibold leading-tight">{{ m.referencia }}</div>
+          </div>
+
+          <!-- Sin actividad -->
+          <div *ngIf="!m.activo && m.operario === 'Sin operario'"
+            class="mt-2 text-[10px] text-gray-400 italic text-center">
+            Sin operario asignado
+          </div>
+          <div *ngIf="!m.activo && m.operario !== 'Sin operario'"
+            class="mt-2 text-[10px] text-gray-400 italic text-center">
+            Sin registro hoy
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         TAB INFORMES DE TURNO
+    ════════════════════════════════════════════════════════════════════════ -->
+    <div *ngIf="tab === 'informes'">
+
+      <!-- Modal informe completo -->
+      <div *ngIf="mostrandoInforme"
+        class="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-4xl my-4 informe-documento">
+
+          <!-- Header modal (no imprime) -->
+          <div class="no-print flex justify-between items-center px-6 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+            <div class="text-xs font-bold text-gray-500 uppercase tracking-wide">Vista previa del informe</div>
+            <div class="flex gap-2">
+              <button (click)="imprimirInforme()"
+                class="px-4 py-1.5 bg-brand-blue hover:bg-brand-blue-dark text-white text-xs font-bold rounded">
+                 Imprimir / PDF
+              </button>
+              <button (click)="cerrarInforme()"
+                class="px-4 py-1.5 bg-white border border-gray-300 hover:bg-gray-100 text-gray-600 text-xs font-bold rounded">
+                Cerrar
+              </button>
+            </div>
+          </div>
+
+          <!-- Cargando -->
+          <div *ngIf="cargandoInforme" class="flex justify-center items-center py-16">
+            <div class="text-brand-blue font-bold animate-pulse">Generando informe...</div>
+          </div>
+
+          <!-- Contenido informe -->
+          <div *ngIf="!cargandoInforme && informeSeleccionado" class="p-8">
+
+            <!-- Membrete -->
+            <div class="flex justify-between items-start pb-4 mb-5 border-b-2 border-brand-blue">
+              <div>
+                <div class="text-sm font-black text-brand-blue tracking-wide">MOLINOS DEL ATLÁNTICO S.A.S.</div>
+                <div class="text-[11px] text-gray-500">La Nieve · Control de Producción Empacadoras</div>
+              </div>
+              <div class="text-right">
+                <div class="text-sm font-black text-gray-800">Informe de Turno</div>
+                <div class="text-[11px] text-gray-500">N.° {{ informeSeleccionado.id }}</div>
+              </div>
+            </div>
+
+            <!-- Datos del turno -->
+            <table class="w-full text-xs mb-6 informe-tabla-datos">
+              <tr>
+                <td class="informe-etiqueta">Fecha</td>
+                <td class="informe-valor">{{ informeSeleccionado.fecha }}</td>
+                <td class="informe-etiqueta">Turno</td>
+                <td class="informe-valor">{{ informeSeleccionado.turno_label }}</td>
+              </tr>
+              <tr>
+                <td class="informe-etiqueta">Operario</td>
+                <td class="informe-valor">{{ informeSeleccionado.operario }}</td>
+                <td class="informe-etiqueta">Máquina</td>
+                <td class="informe-valor">{{ informeSeleccionado.maquina }}</td>
+              </tr>
+            </table>
+
+            <!-- Indicadores del turno -->
+            <div class="informe-stats mb-6">
+              <div class="informe-stat">
+                <div class="informe-stat-valor">{{ informeSeleccionado.total_produccion_maquinas.empacadoras_AB | number }}</div>
+                <div class="informe-stat-label">Unid. Empacadoras A+B</div>
+              </div>
+              <div class="informe-stat">
+                <div class="informe-stat-valor">{{ informeSeleccionado.total_produccion_maquinas.enfardadora | number }}</div>
+                <div class="informe-stat-label">Unid. Enfardadora</div>
+              </div>
+              <div class="informe-stat">
+                <div class="informe-stat-valor">{{ informeSeleccionado.total_consumido_kg | number:'1.1-1' }}</div>
+                <div class="informe-stat-label">Kg Consumidos</div>
+              </div>
+              <div class="informe-stat">
+                <div class="informe-stat-valor" [class.informe-mal]="informeSeleccionado.porcentaje_desperdicio_global > 5">
+                  {{ informeSeleccionado.porcentaje_desperdicio_global | number:'1.1-1' }}%
+                </div>
+                <div class="informe-stat-label">Desperdicio</div>
+              </div>
+            </div>
+
+            <!-- Consumo de empaque -->
+            <div class="mb-6">
+              <h4 class="informe-titulo-seccion">Consumo de Empaque</h4>
+              <table class="w-full text-xs informe-tabla">
+                <thead>
+                  <tr>
+                    <th class="text-left">Descripción</th>
+                    <th class="text-right">Consumo Prod. (Kg)</th>
+                    <th class="text-right">Desperdicio (Kg)</th>
+                    <th class="text-right">Total (Kg)</th>
+                    <th class="text-right">% Desp.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let c of informeSeleccionado.consumo_empaque">
+                    <td class="text-left font-semibold">{{ c.descripcion }}</td>
+                    <td class="text-right">{{ c.consumo_produccion | number:'1.2-2' }}</td>
+                    <td class="text-right">{{ c.desperdicio | number:'1.2-2' }}</td>
+                    <td class="text-right font-bold">{{ c.consumo_total | number:'1.2-2' }}</td>
+                    <td class="text-right font-bold" [class.informe-mal]="c.porcentaje_desperdicio > 5">
+                      {{ c.porcentaje_desperdicio | number:'1.2-2' }}%
+                    </td>
+                  </tr>
+                  <tr *ngIf="informeSeleccionado.consumo_empaque.length === 0">
+                    <td colspan="5" class="text-center text-gray-400 py-4">Sin datos de consumo</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Productividad -->
+            <div class="mb-6">
+              <div class="flex justify-between items-baseline mb-2">
+                <h4 class="informe-titulo-seccion !mb-0">
+                  Productividad del Turno — {{ informeSeleccionado.productividad.tipo === 'trigo' ? 'Área Trigo' : 'Área Maíz' }}
+                </h4>
+                <span class="informe-badge" [class.informe-badge-mal]="!informeSeleccionado.productividad.cumple_meta">
+                  {{ informeSeleccionado.productividad.cumple_meta ? 'Meta cumplida' : 'Meta no cumplida' }}
+                </span>
+              </div>
+              <table class="w-full text-xs informe-tabla-datos mb-2">
+                <tr>
+                  <td class="informe-etiqueta">Producido</td>
+                  <td class="informe-valor">{{ informeSeleccionado.productividad.logrado | number:'1.0-0' }} {{ informeSeleccionado.productividad.meta_unidad }}</td>
+                  <td class="informe-etiqueta">Meta</td>
+                  <td class="informe-valor">{{ informeSeleccionado.productividad.meta_valor | number:'1.0-0' }} {{ informeSeleccionado.productividad.meta_unidad }}</td>
+                  <td class="informe-etiqueta">Cumplimiento</td>
+                  <td class="informe-valor" [class.informe-mal]="!informeSeleccionado.productividad.cumple_meta">
+                    {{ informeSeleccionado.productividad.pct_meta | number:'1.1-1' }}%
+                  </td>
+                </tr>
+              </table>
+              <div class="informe-barra">
+                <div class="informe-barra-relleno" [class.informe-barra-mal]="!informeSeleccionado.productividad.cumple_meta"
+                  [style.width.%]="informeSeleccionado.productividad.pct_meta > 100 ? 100 : informeSeleccionado.productividad.pct_meta">
+                </div>
+              </div>
+              <div class="mt-1 text-[10px] text-gray-500 text-right">
+                Total pacas turno: {{ informeSeleccionado.productividad.total_pacas | number:'1.1-1' }}
+                · Divisor usado: {{ informeSeleccionado.productividad.divisor_usado }} unid/paca
+              </div>
+            </div>
+
+            <!-- Rotulado y pesos -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
+              <div>
+                <h4 class="informe-titulo-seccion">Rotulado y Sellado</h4>
+                <table class="w-full text-xs informe-tabla-datos">
+                  <tr>
+                    <td class="informe-etiqueta">Total revisados</td>
+                    <td class="informe-valor">{{ informeSeleccionado.total_fechados }}</td>
+                  </tr>
+                  <tr>
+                    <td class="informe-etiqueta">Cumplen</td>
+                    <td class="informe-valor">{{ informeSeleccionado.fechados_cumplen }}</td>
+                  </tr>
+                  <tr>
+                    <td class="informe-etiqueta">No cumplen</td>
+                    <td class="informe-valor" [class.informe-mal]="informeSeleccionado.fechados_no_cumplen > 0">{{ informeSeleccionado.fechados_no_cumplen }}</td>
+                  </tr>
+                </table>
+              </div>
+              <div>
+                <h4 class="informe-titulo-seccion">Control de Pesos</h4>
+                <table class="w-full text-xs informe-tabla-datos">
+                  <tr>
+                    <td class="informe-etiqueta">Muestras tomadas</td>
+                    <td class="informe-valor">{{ informeSeleccionado.total_muestras_pesos }}</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+
+            <div class="mt-6 pt-3 border-t border-gray-200 text-[10px] text-gray-400 text-right">
+              Informe generado: {{ informeSeleccionado.generado_en }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Informe General -->
+      <div *ngIf="mostrandoGeneral"
+        class="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl my-4">
+          <div class="flex justify-between items-center px-6 py-4 bg-brand-blue rounded-t-2xl">
+            <div>
+              <div class="text-white font-black text-base">Informe General del Turno</div>
+              <div class="text-blue-200 text-xs" *ngIf="informeGeneral">
+                {{ informeGeneral.turno_label }} · {{ informeGeneral.fecha }}
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button (click)="imprimirInforme()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg">Imprimir</button>
+              <button (click)="cerrarGeneral()" class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-lg">✕ Cerrar</button>
+            </div>
+          </div>
+
+          <div *ngIf="cargandoGeneral" class="flex justify-center py-16">
+            <div class="text-brand-blue font-bold animate-pulse">Generando informe general...</div>
+          </div>
+
+          <div *ngIf="!cargandoGeneral && informeGeneral" class="p-6">
+
+            <!-- Cabecera -->
+            <div class="border border-gray-300 rounded-lg overflow-hidden mb-5">
+              <div class="bg-brand-blue text-white px-4 py-2 text-xs font-black uppercase text-center">
+                Molinos del Atlántico S.A.S. — La Nieve · Control de Producción Empacadoras
+              </div>
+              <div class="grid grid-cols-2 text-xs">
+                <div class="p-3 border-r border-gray-200">
+                  <div class="text-gray-500 font-bold uppercase text-[10px]">Fecha</div>
+                  <div class="font-black text-gray-800">{{ informeGeneral.fecha }}</div>
+                </div>
+                <div class="p-3">
+                  <div class="text-gray-500 font-bold uppercase text-[10px]">Turno</div>
+                  <div class="font-black text-gray-800">{{ informeGeneral.turno_label }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tabla de máquinas activas -->
+            <h4 class="text-sm font-black text-gray-700 uppercase mb-2">Máquinas Activas en el Turno</h4>
+            <div class="border border-gray-200 rounded-lg overflow-hidden mb-5">
+              <table class="w-full text-xs">
+                <thead class="bg-slate-100">
+                  <tr>
+                    <th class="px-3 py-2 text-left font-bold text-gray-600">MÁQ.</th>
+                    <th class="px-3 py-2 text-left font-bold text-gray-600">TIPO</th>
+                    <th class="px-3 py-2 text-left font-bold text-gray-600">OPERARIO</th>
+                    <th class="px-3 py-2 text-left font-bold text-gray-600">REFERENCIA</th>
+                    <th class="px-3 py-2 text-right font-bold text-gray-600">CONTADOR</th>
+                    <th class="px-3 py-2 text-right font-bold text-gray-600">PACAS</th>
+                    <th class="px-3 py-2 text-right font-bold text-gray-600">KG CONSUMIDOS</th>
+                    <th class="px-3 py-2 text-center font-bold text-gray-600">DETALLE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let m of informeGeneral.maquinas_activas"
+                    [class]="'border-t border-gray-100 ' + (m.tipo === 'trigo' ? 'bg-amber-50/40' : 'bg-blue-50/40')">
+                    <td class="px-3 py-2 font-black text-brand-blue">{{ m.maquina }}</td>
+                    <td class="px-3 py-2">
+                      <span [class]="'px-1.5 py-0.5 rounded text-[10px] font-bold ' + (m.tipo === 'trigo' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700')">
+                        {{ m.tipo === 'trigo'? 'TRIGO': 'MAÍZ'}}
+                      </span>
+                    </td>
+                    <td class="px-3 py-2 font-semibold">{{ m.operario }}</td>
+                    <td class="px-3 py-2 text-[10px]">{{ m.referencia }}</td>
+                    <td class="px-3 py-2 text-right font-bold">{{ m.contador_final | number }}</td>
+                    <td class="px-3 py-2 text-right font-bold text-emerald-700">{{ m.pacas | number:'1.1-1' }}</td>
+                    <td class="px-3 py-2 text-right">{{ m.consumido_kg | number:'1.1-1' }} kg</td>
+                    <td class="px-3 py-2 text-center">
+                      <button (click)="verInforme(m.registro_id)"
+                        class="px-2 py-1 bg-brand-blue hover:bg-brand-blue-dark text-white text-[10px] font-bold rounded">
+                        Ver →
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Totales producción -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+              <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+                <div class="text-xl font-black text-blue-800">{{ informeGeneral.total_pacas_maiz | number:'1.1-1' }}</div>
+                <div class="text-[10px] font-bold text-blue-600 uppercase">Pacas Maíz</div>
+              </div>
+              <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+                <div class="text-xl font-black text-amber-800">{{ informeGeneral.total_pacas_trigo | number:'1.1-1' }}</div>
+                <div class="text-[10px] font-bold text-amber-600 uppercase">Pacas Trigo</div>
+              </div>
+              <div class="bg-gray-50 border border-gray-200 rounded-xl p-3 text-center">
+                <div class="text-xl font-black text-gray-800">{{ informeGeneral.total_consumido_kg | number:'1.1-1' }} Kg</div>
+                <div class="text-[10px] font-bold text-gray-500 uppercase">Total Consumido</div>
+              </div>
+              <div class="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+                <div class="text-xl font-black text-brand-red">{{ informeGeneral.pct_desperdicio_empaque | number:'1.2-2' }}%</div>
+                <div class="text-[10px] font-bold text-brand-red uppercase">% Desp. Empaque</div>
+              </div>
+            </div>
+
+            <!-- Productividad -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+              <!-- Maíz -->
+              <div [class]="'border-2 rounded-xl p-4 ' + (informeGeneral.productividad_maiz.cumple_meta ? 'bg-emerald-50 border-emerald-400' : 'bg-red-50 border-red-400')">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-xs font-black text-gray-700 uppercase">Productividad Maíz</span>
+                  <span [class]="'text-[10px] font-black px-2 py-0.5 rounded-full ' + (informeGeneral.productividad_maiz.cumple_meta ? 'bg-emerald-500 text-white' : 'bg-brand-red text-white')">
+                    {{ informeGeneral.productividad_maiz.cumple_meta ? 'CUMPLE': 'NO CUMPLE'}}
+                  </span>
+                </div>
+                <div class="flex justify-between text-xs mb-2">
+                  <span class="font-black text-gray-800">{{ informeGeneral.productividad_maiz.logrado | number:'1.0-0' }} kg</span>
+                  <span class="text-gray-400">/ {{ informeGeneral.productividad_maiz.meta_valor | number }} kg meta</span>
+                  <span [class]="'font-black ' + (informeGeneral.productividad_maiz.cumple_meta ? 'text-emerald-600' : 'text-brand-red')">{{ informeGeneral.productividad_maiz.pct_meta }}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div [class]="'h-3 rounded-full ' + (informeGeneral.productividad_maiz.cumple_meta ? 'bg-emerald-500' : 'bg-brand-red-light')"
+                    [style.width.%]="informeGeneral.productividad_maiz.pct_meta > 100 ? 100 : informeGeneral.productividad_maiz.pct_meta"></div>
+                </div>
+              </div>
+              <!-- Trigo -->
+              <div [class]="'border-2 rounded-xl p-4 ' + (informeGeneral.productividad_trigo.cumple_meta ? 'bg-emerald-50 border-emerald-400' : 'bg-red-50 border-red-400')">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-xs font-black text-gray-700 uppercase">Productividad Trigo (T1+T2)</span>
+                  <span [class]="'text-[10px] font-black px-2 py-0.5 rounded-full ' + (informeGeneral.productividad_trigo.cumple_meta ? 'bg-emerald-500 text-white' : 'bg-brand-red text-white')">
+                    {{ informeGeneral.productividad_trigo.cumple_meta ? 'CUMPLE': 'NO CUMPLE'}}
+                  </span>
+                </div>
+                <div class="flex justify-between text-xs mb-2">
+                  <span class="font-black text-gray-800">{{ informeGeneral.productividad_trigo.logrado | number:'1.1-1' }} pacas</span>
+                  <span class="text-gray-400">/ {{ informeGeneral.productividad_trigo.meta_valor | number }} pacas meta</span>
+                  <span [class]="'font-black ' + (informeGeneral.productividad_trigo.cumple_meta ? 'text-emerald-600' : 'text-brand-red')">{{ informeGeneral.productividad_trigo.pct_meta }}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div [class]="'h-3 rounded-full ' + (informeGeneral.productividad_trigo.cumple_meta ? 'bg-emerald-500' : 'bg-brand-red-light')"
+                    [style.width.%]="informeGeneral.productividad_trigo.pct_meta > 100 ? 100 : informeGeneral.productividad_trigo.pct_meta"></div>
+                </div>
+                <div class="text-[9px] text-gray-400 mt-1">{{ informeGeneral.productividad_trigo.nota_meta }}</div>
+              </div>
+            </div>
+
+            <!-- Consumo empaque + Rotulado -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h4 class="text-xs font-black text-gray-700 uppercase mb-2">Consumo de Empaque</h4>
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                  <table class="w-full text-[11px]">
+                    <thead class="bg-slate-100">
+                      <tr>
+                        <th class="px-2 py-1.5 text-left font-bold text-gray-600">DESCRIPCIÓN</th>
+                        <th class="px-2 py-1.5 text-right font-bold text-gray-600">CONS. (Kg)</th>
+                        <th class="px-2 py-1.5 text-right font-bold text-gray-600">DESP. EMP %</th>
+                        <th class="px-2 py-1.5 text-right font-bold text-gray-600">DESP. FARDO %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let c of informeGeneral.consumo_empaque" class="border-t border-gray-100">
+                        <td class="px-2 py-1.5 font-semibold">{{ c.descripcion }}</td>
+                        <td class="px-2 py-1.5 text-right">{{ c.consumo_produccion | number:'1.1-1' }}</td>
+                        <td class="px-2 py-1.5 text-right text-brand-red font-bold">{{ c.porcentaje_desperdicio | number:'1.2-2' }}%</td>
+                        <td class="px-2 py-1.5 text-right text-purple-600 font-bold">{{ c.porcentaje_desperdicio_fardo | number:'1.2-2' }}%</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                <h4 class="text-xs font-black text-gray-700 uppercase mb-3">Rotulado y Sellado</h4>
+                <div class="flex justify-around text-center">
+                  <div><div class="text-2xl font-black text-gray-800">{{ informeGeneral.total_fechados }}</div><div class="text-[10px] text-gray-500 font-bold">REVISADOS</div></div>
+                  <div><div class="text-2xl font-black text-emerald-600">{{ informeGeneral.fechados_cumplen }}</div><div class="text-[10px] text-emerald-600 font-bold">CUMPLEN </div></div>
+                  <div><div class="text-2xl font-black text-brand-red">{{ informeGeneral.fechados_no_cumplen }}</div><div class="text-[10px] text-brand-red font-bold">NO CUMPLEN </div></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 text-[10px] text-gray-400 text-right">Generado: {{ informeGeneral.generado_en }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtro fecha + turno -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-5">
+        <div class="flex flex-wrap gap-4 items-end">
+          <div>
+            <label class="block text-xs font-bold text-gray-600 mb-1">FECHA</label>
+            <input type="date" [(ngModel)]="filtroInformeFecha"
+              class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-600 mb-1">TURNO</label>
+            <select [(ngModel)]="filtroInformeTurno"
+              class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">-- Seleccionar --</option>
+              <option value="T1">Turno 1 — 6:00 a.m. a 2:00 p.m.</option>
+              <option value="T2">Turno 2 — 2:00 p.m. a 10:00 p.m.</option>
+              <option value="T3">Turno 3 — 10:00 p.m. a 6:00 a.m.</option>
+            </select>
+          </div>
+          <button (click)="verInformeGeneral()"
+            [disabled]="!filtroInformeFecha || !filtroInformeTurno"
+            [class]="'px-5 py-2 font-bold rounded-lg text-sm border-2 transition-all ' +
+            (filtroInformeFecha && filtroInformeTurno
+              ? 'bg-brand-blue hover:bg-brand-blue-dark text-white border-brand-blue-dark shadow cursor-pointer'
+              : 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed')">
+             Ver Informe General
+          </button>
+          <button (click)="cargarInformes()"
+            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg">
+             Actualizar lista
+          </button>
+        </div>
+      </div>
+
+      <!-- Lista de informes por máquina -->
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-black text-gray-700">Ver Detalle por Máquina</h3>
+        <span *ngIf="toastInformes" class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 px-3 py-1 rounded-lg">{{ toastInformes }}</span>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <table class="w-full text-xs">
+          <thead class="bg-slate-100 border-b">
+            <tr>
+              <th class="px-4 py-3 text-left font-bold text-gray-600">ID</th>
+              <th class="px-4 py-3 text-left font-bold text-gray-600">FECHA</th>
+              <th class="px-4 py-3 text-left font-bold text-gray-600">TURNO</th>
+              <th class="px-4 py-3 text-left font-bold text-gray-600">MÁQUINA</th>
+              <th class="px-4 py-3 text-left font-bold text-gray-600">OPERARIO</th>
+              <th class="px-4 py-3 text-left font-bold text-gray-600">EXPORTACIÓN</th>
+              <th class="px-4 py-3 text-left font-bold text-gray-600">REGISTRADO</th>
+              <th class="px-4 py-3 text-left font-bold text-gray-600">ACCIÓN</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let inf of informes" class="border-b hover:bg-gray-50">
+              <td class="px-4 py-3 font-mono text-gray-400">#{{ inf.id }}</td>
+              <td class="px-4 py-3 font-bold">{{ inf.fecha }}</td>
+              <td class="px-4 py-3">
+                <span [class]="'px-2 py-0.5 rounded text-[10px] font-bold ' + turnoColor(inf.turno)">
+                  {{ inf.turno_label || inf.turno }}
+                </span>
+              </td>
+              <td class="px-4 py-3 font-mono font-bold text-brand-blue">{{ inf.maquina }}</td>
+              <td class="px-4 py-3">{{ inf.operario }}</td>
+              <td class="px-4 py-3">
+                <span *ngIf="inf.pro_numero || inf.lote" class="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-blue-50 text-brand-blue border border-brand-blue/20">
+                  {{ inf.pro_numero ? 'PRO' + inf.pro_numero : '' }}{{ inf.pro_numero && inf.lote ? ' · ' : '' }}{{ inf.lote ? 'Lote ' + inf.lote : '' }}
+                </span>
+                <span *ngIf="!inf.pro_numero && !inf.lote" class="text-gray-300">Sin asignar</span>
+              </td>
+              <td class="px-4 py-3 text-gray-400">{{ inf.generado_en }}</td>
+              <td class="px-4 py-3">
+                <div class="flex gap-1.5 flex-wrap">
+                  <button (click)="verInforme(inf.id)"
+                    class="px-3 py-1.5 bg-brand-blue hover:bg-brand-blue-dark text-white text-[11px] font-bold rounded-lg shadow">
+                     Ver Detalle
+                  </button>
+                  <button (click)="verPlanillas(inf)" [disabled]="cargandoEnlacesPlanilla === inf.id"
+                    class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[11px] font-bold rounded-lg shadow">
+                    {{ cargandoEnlacesPlanilla === inf.id ? '': ''}} Ver Planillas
+                  </button>
+                  <button (click)="abrirAsignarExportacion(inf)"
+                    class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold rounded-lg shadow">
+                    Asignar PRO / Lote
+                  </button>
+                  <button *ngIf="inf.pro_numero || inf.lote" (click)="reenviarExportacion(inf)" [disabled]="reenviandoExportacion === inf.id"
+                    class="px-3 py-1.5 bg-slate-600 hover:bg-slate-700 disabled:opacity-50 text-white text-[11px] font-bold rounded-lg shadow">
+                    {{ reenviandoExportacion === inf.id ? 'Enviando...' : 'Reenviar por correo' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="informes.length === 0" class="text-center py-12 text-gray-400">
+          <div class="font-bold text-sm">Sin informes disponibles</div>
+          <div class="text-xs mt-1">Los informes se generan cuando los operarios guardan sus registros de bobinas</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Asignar PRO / Lote de exportación -->
+    <div *ngIf="mostrandoAsignarExportacion" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <h3 class="text-base font-black text-gray-800 mb-1">Asignar PRO / Lote de Exportación</h3>
+        <p class="text-xs text-gray-400 mb-4">
+          Se asigna a las 4 planillas de este turno y máquina: Control de Empaque, Rotulado y Sellado, Control de Peso y Control de Peso Enfardadora.
+        </p>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Número de PRO</label>
+            <input type="text" [(ngModel)]="proNumeroInput" placeholder="Ej: 1116"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-gray-500 uppercase mb-1">Lote</label>
+            <input type="text" [(ngModel)]="loteInput" placeholder="Ej: 140926"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/30 focus:border-brand-blue">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+          <button (click)="cerrarAsignarExportacion()" [disabled]="guardandoExportacion"
+            class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold rounded-lg">
+            Cancelar
+          </button>
+          <button (click)="guardarAsignacionExportacion()" [disabled]="guardandoExportacion"
+            class="px-4 py-2 bg-brand-blue hover:bg-brand-blue-dark disabled:opacity-50 text-white text-xs font-bold rounded-lg shadow">
+            {{ guardandoExportacion ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         TAB MANTENIMIENTO
+    ════════════════════════════════════════════════════════════════════════ -->
+    <div *ngIf="tab === 'mantenimiento'">
+
+      <!-- Resumen -->
+      <div class="mtto-stats mb-5" *ngIf="resumenMtto">
+        <div class="mtto-stat">
+          <div class="mtto-stat-valor" [class.informe-mal]="resumenMtto.vencidos > 0">{{ resumenMtto.vencidos }}</div>
+          <div class="mtto-stat-label">Vencidos</div>
+        </div>
+        <div class="mtto-stat">
+          <div class="mtto-stat-valor text-brand-gold-dark">{{ resumenMtto.proximos }}</div>
+          <div class="mtto-stat-label">Próximos (7 días)</div>
+        </div>
+        <div class="mtto-stat">
+          <div class="mtto-stat-valor">{{ resumenMtto.ok }}</div>
+          <div class="mtto-stat-label">Al día</div>
+        </div>
+        <div class="mtto-stat">
+          <div class="mtto-stat-valor">{{ resumenMtto.sin_registrar }}</div>
+          <div class="mtto-stat-label">Sin registrar</div>
+        </div>
+        <div class="mtto-stat">
+          <div class="mtto-stat-valor">${{ resumenMtto.costo_total_historico | number:'1.0-0' }}</div>
+          <div class="mtto-stat-label">Costo histórico</div>
+          <div class="text-[9px] text-gray-400 mt-0.5">{{ resumenMtto.pct_historico_con_costo }}% con costo</div>
+        </div>
+      </div>
+
+      <!-- Sub-navegación -->
+      <div class="flex gap-1 mb-5 border-b border-gray-200">
+        <button *ngFor="let st of [
+          {key:'cronograma', label:'Cronograma'},
+          {key:'plan', label:'Plan Preventivo'},
+          {key:'historial', label:'Historial Correctivo'},
+          {key:'repuestos', label:'Repuestos Críticos'}
+        ]" (click)="cambiarMttoSubTab(st.key)"
+          [class]="'px-4 py-2 text-xs font-bold rounded-t-lg transition-colors ' +
+          (mttoSubTab === st.key ? 'bg-brand-blue text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')">
+          {{ st.label }}
+        </button>
+      </div>
+
+      <!-- SUB-TAB: CRONOGRAMA -->
+      <div *ngIf="mttoSubTab === 'cronograma'">
+        <div class="bg-white rounded-xl shadow-card p-5">
+          <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+            <div>
+              <h3 class="text-sm font-black text-gray-800">Cronograma de Mantenimiento Preventivo</h3>
+              <p class="text-[10px] text-gray-400 mt-1">Vencidos primero</p>
+            </div>
+            <div class="flex gap-2">
+              <select [(ngModel)]="filtroMttoEstado" (ngModelChange)="cargarCronograma()" class="border border-gray-300 rounded-lg px-3 py-2 text-xs">
+                <option value="">Todos los estados</option>
+                <option value="VENCIDO">Vencidos</option>
+                <option value="PROXIMO">Próximos</option>
+                <option value="OK">Al día</option>
+                <option value="SIN_REGISTRAR">Sin registrar</option>
+              </select>
+              <button (click)="cargarCronograma()" class="px-4 py-2 bg-brand-blue hover:bg-brand-blue-dark text-white text-xs font-bold rounded-lg">
+                Actualizar
+              </button>
+            </div>
+          </div>
+
+          <div *ngIf="cargandoCronograma" class="text-center py-10 text-gray-400 text-xs animate-pulse">Cargando cronograma...</div>
+
+          <div class="overflow-x-auto" *ngIf="!cargandoCronograma">
+            <table class="w-full text-[11px]">
+              <thead>
+                <tr class="bg-gray-50">
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">MÁQUINA</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">SECCIÓN/COMPONENTE</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">FRECUENCIA</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">ÚLTIMA EJEC.</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">PRÓXIMA FECHA</th>
+                  <th class="px-3 py-2 text-center font-bold text-gray-500">ESTADO</th>
+                  <th class="px-3 py-2 text-center font-bold text-gray-500">USO RECIENTE</th>
+                  <th class="px-3 py-2 text-center font-bold text-gray-500">ACCIÓN</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let c of cronograma" class="border-b border-gray-100"
+                  [class.bg-red-50]="c.estado === 'VENCIDO'">
+                  <td class="px-3 py-2 font-bold text-brand-blue">{{ c.maquina }}</td>
+                  <td class="px-3 py-2">{{ c.seccion_componente }}</td>
+                  <td class="px-3 py-2">{{ c.frecuencia }}</td>
+                  <td class="px-3 py-2">{{ c.ultima_ejecucion || '—' }}</td>
+                  <td class="px-3 py-2">{{ c.proxima_fecha || '—' }}</td>
+                  <td class="px-3 py-2 text-center">
+                    <span [class]="'text-[9px] font-bold px-2 py-0.5 rounded-full ' + estadoMttoColor(c.estado)">
+                      {{ estadoMttoLabel(c.estado) }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-center text-gray-500">
+                    <span *ngIf="c.turnos_produccion_recientes !== null">{{ c.turnos_produccion_recientes }} turnos (30d)</span>
+                    <span *ngIf="c.turnos_produccion_recientes === null" class="text-gray-300">—</span>
+                  </td>
+                  <td class="px-3 py-2 text-center">
+                    <button (click)="abrirModalEjecucion(c)" class="text-[10px] px-2 py-1 bg-white text-brand-blue border border-brand-blue/30 rounded font-bold hover:bg-brand-blue-50">
+                      Registrar
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-TAB: PLAN PREVENTIVO -->
+      <div *ngIf="mttoSubTab === 'plan'">
+        <div class="bg-white rounded-xl shadow-card p-5">
+          <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+            <h3 class="text-sm font-black text-gray-800">Plan Preventivo — Actividades Definidas</h3>
+            <select [(ngModel)]="filtroMttoLinea" (ngModelChange)="cargarPlanPreventivo()" class="border border-gray-300 rounded-lg px-3 py-2 text-xs">
+              <option value="">Todas las líneas</option>
+              <option value="EMPACADORAS">Empacadoras</option>
+              <option value="ENFARDADORAS">Enfardadoras</option>
+              <option value="BANDAS_SOPLADORES">Bandas y Sopladores</option>
+            </select>
+          </div>
+          <div *ngIf="cargandoPlan" class="text-center py-10 text-gray-400 text-xs animate-pulse">Cargando plan preventivo...</div>
+          <div class="overflow-x-auto" *ngIf="!cargandoPlan">
+            <table class="w-full text-[11px]">
+              <thead>
+                <tr class="bg-gray-50">
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">SECCIÓN/COMPONENTE</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">ACTIVIDAD</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">TIPO</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">FRECUENCIA</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">RESPONSABLE</th>
+                  <th class="px-3 py-2 text-right font-bold text-gray-500">TIEMPO (MIN)</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">REPUESTO/INSUMO</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of planPreventivo" class="border-b border-gray-100">
+                  <td class="px-3 py-2 font-bold text-gray-700">{{ p.seccion_componente }}</td>
+                  <td class="px-3 py-2">{{ p.actividad }}</td>
+                  <td class="px-3 py-2">{{ p.tipo }}</td>
+                  <td class="px-3 py-2">{{ p.frecuencia }}</td>
+                  <td class="px-3 py-2">{{ p.responsable }}</td>
+                  <td class="px-3 py-2 text-right">{{ p.tiempo_min }}</td>
+                  <td class="px-3 py-2 text-gray-500">{{ p.repuesto_insumo }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-TAB: HISTORIAL CORRECTIVO -->
+      <div *ngIf="mttoSubTab === 'historial'">
+        <div class="bg-white rounded-xl shadow-card p-5 mb-5">
+          <h3 class="text-sm font-black text-gray-800 mb-4">Registrar Nuevo Mantenimiento Correctivo</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Máquina</label>
+              <input type="text" [(ngModel)]="formHistorial.maquina" placeholder="Ej: EMPACA 5" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Equipo/Componente</label>
+              <input type="text" [(ngModel)]="formHistorial.equipo_componente" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Fecha del Mantenimiento</label>
+              <input type="date" [(ngModel)]="formHistorial.fecha_mantenimiento" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Mantenimiento Realizado</label>
+            <textarea [(ngModel)]="formHistorial.mantenimiento_realizado" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></textarea>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Costo ($)</label>
+              <input type="number" [(ngModel)]="formHistorial.costo" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Prioridad</label>
+              <select [(ngModel)]="formHistorial.prioridad" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <option value="">-- Seleccionar --</option>
+                <option value="CRITICA">Crítica (&lt; 30 min)</option>
+                <option value="ALTA">Alta (&lt; 4 h)</option>
+                <option value="MEDIA">Media (&lt; 48 h)</option>
+                <option value="BAJA">Baja (próxima parada)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Estado Resultante</label>
+              <select [(ngModel)]="formHistorial.estado_resultante" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <option value="BUENO">Bueno</option>
+                <option value="MEDIO">Medio</option>
+                <option value="MALO">Malo</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">¿Hubo Cambio de Pieza?</label>
+              <select [(ngModel)]="formHistorial.hubo_cambio" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <option value="SI">Sí</option>
+                <option value="NO">No</option>
+              </select>
+            </div>
+          </div>
+          <button (click)="guardarHistorial()" class="px-5 py-2 bg-brand-blue hover:bg-brand-blue-dark text-white text-xs font-bold rounded-lg">
+            Guardar Registro
+          </button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-card p-5">
+          <h3 class="text-sm font-black text-gray-800 mb-4">Historial Completo</h3>
+          <div *ngIf="cargandoHistorial" class="text-center py-10 text-gray-400 text-xs animate-pulse">Cargando historial...</div>
+          <div class="overflow-x-auto" *ngIf="!cargandoHistorial">
+            <table class="w-full text-[11px]">
+              <thead>
+                <tr class="bg-gray-50">
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">MÁQUINA</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">COMPONENTE</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">FECHA</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">MANTENIMIENTO REALIZADO</th>
+                  <th class="px-3 py-2 text-right font-bold text-gray-500">COSTO</th>
+                  <th class="px-3 py-2 text-center font-bold text-gray-500">ESTADO</th>
+                  <th class="px-3 py-2 text-center font-bold text-gray-500">CAMBIO</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let h of historialCorrectivo" class="border-b border-gray-100">
+                  <td class="px-3 py-2 font-bold text-brand-blue">{{ h.maquina }}</td>
+                  <td class="px-3 py-2">{{ h.equipo_componente }}</td>
+                  <td class="px-3 py-2">{{ h.fecha_mantenimiento }}</td>
+                  <td class="px-3 py-2">{{ h.mantenimiento_realizado }}</td>
+                  <td class="px-3 py-2 text-right">{{ h.costo ? ('$' + (h.costo | number:'1.0-0')) : '—' }}</td>
+                  <td class="px-3 py-2 text-center">
+                    <span [class]="'text-[9px] font-bold px-2 py-0.5 rounded-full ' +
+                      (h.estado_resultante === 'BUENO' ? 'bg-emerald-50 text-emerald-700' :
+                       h.estado_resultante === 'MEDIO' ? 'bg-brand-gold-50 text-brand-gold-dark' : 'bg-red-50 text-brand-red')">
+                      {{ h.estado_resultante }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-2 text-center">{{ h.hubo_cambio }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-TAB: REPUESTOS CRÍTICOS -->
+      <div *ngIf="mttoSubTab === 'repuestos'">
+        <div class="bg-white rounded-xl shadow-card p-5">
+          <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
+            <h3 class="text-sm font-black text-gray-800">Repuestos Críticos por Sección</h3>
+            <input type="text" [(ngModel)]="filtroMttoRepuesto" (ngModelChange)="cargarRepuestos()"
+              placeholder="Buscar por máquina..." class="border border-gray-300 rounded-lg px-3 py-2 text-xs">
+          </div>
+          <div *ngIf="cargandoRepuestos" class="text-center py-10 text-gray-400 text-xs animate-pulse">Cargando repuestos...</div>
+          <div class="overflow-x-auto max-h-[600px] overflow-y-auto" *ngIf="!cargandoRepuestos">
+            <table class="w-full text-[11px]">
+              <thead class="sticky top-0 bg-white">
+                <tr class="bg-gray-50">
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">SECCIÓN</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">COMPONENTE</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">REFERENCIA</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">MARCA</th>
+                  <th class="px-3 py-2 text-right font-bold text-gray-500">CANT. INSTALADA</th>
+                  <th class="px-3 py-2 text-left font-bold text-gray-500">MÁQUINAS</th>
+                  <th class="px-3 py-2 text-right font-bold text-gray-500">STOCK MÍN.</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let r of repuestosCriticos" class="border-b border-gray-100">
+                  <td class="px-3 py-2 font-bold text-gray-700">{{ r.seccion }}</td>
+                  <td class="px-3 py-2">{{ r.componente }}</td>
+                  <td class="px-3 py-2 font-mono text-brand-blue">{{ r.referencia }}</td>
+                  <td class="px-3 py-2">{{ r.marca }}</td>
+                  <td class="px-3 py-2 text-right">{{ r.cantidad_instalada }}</td>
+                  <td class="px-3 py-2 text-gray-500">{{ r.maquinas_aplica }}</td>
+                  <td class="px-3 py-2 text-right font-bold">{{ r.stock_minimo_sugerido }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: Registrar ejecución de mantenimiento -->
+      <div *ngIf="mostrandoModalEjecucion" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl border border-gray-300 p-6 w-full max-w-sm">
+          <div class="text-sm font-black text-gray-800 mb-1">Registrar Ejecución</div>
+          <div class="text-xs text-gray-500 mb-4">{{ itemEjecucion?.maquina }} — {{ itemEjecucion?.seccion_componente }}</div>
+          <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Fecha de ejecución</label>
+          <input type="date" [(ngModel)]="fechaEjecucion" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-3">
+          <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Observaciones</label>
+          <textarea [(ngModel)]="observacionesEjecucion" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-4"></textarea>
+          <div class="flex gap-3 justify-end">
+            <button (click)="mostrandoModalEjecucion=false" class="px-4 py-1.5 bg-gray-100 text-gray-700 border border-gray-300 font-bold rounded-lg text-xs hover:bg-gray-200">
+              Cancelar
+            </button>
+            <button (click)="confirmarEjecucion()" class="px-4 py-1.5 bg-brand-blue hover:bg-brand-blue-dark text-white font-bold rounded-lg text-xs shadow">
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── TAB CREAR SALIDA (pide a Bodega) ── -->
+    <div *ngIf="tab === 'crear-salida'">
+      <div class="max-w-3xl">
+        <h2 class="text-base font-black text-gray-800 mb-1">Crear Orden de Salida</h2>
+        <p class="text-xs text-gray-400 mb-5">
+          Al elegir la referencia, aparece cuánto hay ya en planta y si conviene pedir o no.
+        </p>
+
+        <div class="bg-white rounded-xl shadow-card p-5">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Fecha</label>
+              <input type="date" [(ngModel)]="formNuevaOrden.fecha" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Turno</label>
+              <select [(ngModel)]="formNuevaOrden.turno" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <option value="">-- Seleccionar --</option>
+                <option *ngFor="let t of turnosOrden" [value]="t.key">{{ t.label }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Área Solicitante</label>
+              <select [(ngModel)]="formNuevaOrden.area_solicitante" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                <option *ngFor="let a of areasBodega" [value]="a">{{ a }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Referencia</label>
+              <select (change)="seleccionarReferenciaOrden($any($event.target).value)" [disabled]="cargandoReferenciasOrden"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100">
+                <option value="">-- Seleccionar --</option>
+                <option *ngFor="let r of referenciasEmpaqueOrden" [value]="r.codigo">{{ r.descripcion }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Card de Planta -->
+          <div *ngIf="cargandoCardPlanta" class="text-xs text-gray-400 animate-pulse mb-4">Consultando inventario en planta...</div>
+          <div *ngIf="!cargandoCardPlanta && cardPlanta" class="mb-4 p-4 rounded-lg border-2 border-brand-blue bg-blue-50">
+            <div class="flex justify-between items-start flex-wrap gap-3">
+              <div>
+                <div class="text-[10px] font-bold text-brand-blue uppercase mb-1">En Planta Ahora Mismo</div>
+                <div class="text-2xl font-black text-gray-800">{{ cardPlanta.saldo_planta_kg | number:'1.0-0' }} kg</div>
+                <div class="text-[10px] text-gray-500">{{ cardPlanta.saldo_planta_bobinas }} bobinas · consumo prom. {{ cardPlanta.consumo_promedio_diario_kg | number:'1.0-0' }} kg/día</div>
+              </div>
+              <div class="text-right">
+                <span [class]="'text-[10px] font-bold px-2 py-1 rounded-full ' + coberturaPlantaColor(cardPlanta.estado_cobertura)">
+                  {{ coberturaPlantaLabel(cardPlanta.estado_cobertura) }}
+                </span>
+                <div *ngIf="cardPlanta.cobertura_dias_planta !== null && cardPlanta.cobertura_dias_planta !== undefined" class="text-xs font-bold text-gray-700 mt-1">
+                  Alcanza para {{ cardPlanta.cobertura_dias_planta }} días
+                </div>
+              </div>
+            </div>
+            <p *ngIf="cardPlanta.tiene_ajuste_manual" class="text-[10px] text-gray-400 italic mt-2">Calculado desde el último conteo físico registrado.</p>
+          </div>
+
+          <div *ngIf="!cargandoSugerencia && sugerenciaPedido" class="mb-4 p-3 rounded-lg border border-gray-200 bg-gray-50 text-xs text-gray-600">
+            <span class="font-bold text-gray-800">Sugerencia histórica:</span> {{ sugerenciaPedido.nota }}
+            <span *ngIf="sugerenciaPedido.kg_sugerido > 0"> — pedir aprox. <span class="font-black text-brand-blue">{{ sugerenciaPedido.kg_sugerido | number:'1.0-0' }} kg</span> ({{ sugerenciaPedido.bobinas_sugeridas }} bobinas).</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Cantidad (Kg)</label>
+              <input type="number" [(ngModel)]="formNuevaOrden.cantidad_kg" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Cantidad (Bobinas)</label>
+              <input type="number" [(ngModel)]="formNuevaOrden.cantidad_bobinas" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Observaciones</label>
+              <input type="text" [(ngModel)]="formNuevaOrden.observaciones" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            </div>
+          </div>
+
+          <button (click)="crearOrdenSalida()" [disabled]="guardandoOrden"
+            class="px-4 py-2.5 bg-brand-blue hover:bg-brand-blue-dark disabled:opacity-50 text-white font-bold rounded-lg text-xs shadow">
+            {{ guardandoOrden ? 'Guardando...' : 'Crear Orden de Salida' }}
+          </button>
+          <p *ngIf="errorOrden" class="text-xs text-brand-red font-bold mt-3">{{ errorOrden }}</p>
+          <p *ngIf="toastOrden" class="text-xs text-emerald-700 font-bold mt-3">{{ toastOrden }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB USUARIOS ── -->
+    <div *ngIf="tab === 'usuarios'">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-base font-black text-gray-800">Gestión de Operarios</h2>
+        <div class="flex gap-2 items-center">
+          <span *ngIf="toastUsuario" class="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-300 px-3 py-1 rounded-lg">{{ toastUsuario }}</span>
+          <button (click)="abrirCrear()" class="px-4 py-2 bg-brand-blue hover:bg-brand-blue-dark text-white text-xs font-bold rounded-lg shadow">+ Nuevo Operario</button>
+        </div>
+      </div>
+      <div *ngIf="mostrarFormUsuario" class="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-5 shadow-sm">
+        <h3 class="text-sm font-black text-brand-blue mb-4">{{ editandoId ? 'Editar Operario': 'Nuevo Operario'}}</h3>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div><label class="block text-xs font-bold text-gray-600 mb-1">NOMBRE COMPLETO *</label><input type="text" [(ngModel)]="formUsuario.nombre" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
+          <div><label class="block text-xs font-bold text-gray-600 mb-1">CÉDULA *</label><input type="text" [(ngModel)]="formUsuario.cedula" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
+          <div><label class="block text-xs font-bold text-gray-600 mb-1">USERNAME *</label><input type="text" [(ngModel)]="formUsuario.username" [disabled]="!!editandoId" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100"></div>
+          <div><label class="block text-xs font-bold text-gray-600 mb-1">CONTRASEÑA {{ editandoId ? '(dejar vacío para no cambiar)' : '*' }}</label><input type="password" [(ngModel)]="formUsuario.password" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"></div>
+          <div><label class="block text-xs font-bold text-gray-600 mb-1">ROL</label>
+            <select [(ngModel)]="formUsuario.rol" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="operario">Operario</option><option value="admin">Administrador</option><option value="bodega">Bodega</option><option value="calidad">Calidad</option>
+            </select>
+          </div>
+          <div><label class="block text-xs font-bold text-gray-600 mb-1">MÁQUINAS ASIGNADAS</label>
+            <select [(ngModel)]="formUsuario.maquinas_asignadas" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+              <option value="">Sin asignar</option>
+              <option value="1P-2Q">1P + 2Q (pareja)</option><option value="4T">4T (sola)</option>
+              <option value="5U-6V">5U + 6V (pareja)</option><option value="7W">7W (sola)</option>
+              <option value="8S-9X">8S + 9X (pareja)</option><option value="10Y-11Z">10Y + 11Z (pareja)</option>
+            </select>
+          </div>
+        </div>
+        <div *ngIf="errorUsuario" class="bg-red-50 border border-red-300 text-brand-red text-xs font-bold px-3 py-2 rounded mb-3"> {{ errorUsuario }}</div>
+        <div class="flex gap-2">
+          <button (click)="guardarUsuario()" class="px-5 py-2 bg-brand-blue hover:bg-brand-blue-dark text-white text-xs font-bold rounded-lg">Guardar</button>
+          <button (click)="mostrarFormUsuario=false" class="px-5 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-lg">Cancelar</button>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-100 border-b border-gray-200">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-bold text-gray-600">NOMBRE</th>
+              <th class="px-4 py-3 text-left text-xs font-bold text-gray-600">CÉDULA</th>
+              <th class="px-4 py-3 text-left text-xs font-bold text-gray-600">USERNAME</th>
+              <th class="px-4 py-3 text-left text-xs font-bold text-gray-600">ROL</th>
+              <th class="px-4 py-3 text-left text-xs font-bold text-gray-600">MÁQUINAS</th>
+              <th class="px-4 py-3 text-left text-xs font-bold text-gray-600">ESTADO</th>
+              <th class="px-4 py-3 text-left text-xs font-bold text-gray-600">ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let u of usuarios" class="border-b border-gray-100 hover:bg-gray-50">
+              <td class="px-4 py-3 font-semibold">{{ u.nombre }}</td>
+              <td class="px-4 py-3 text-gray-600">{{ u.cedula }}</td>
+              <td class="px-4 py-3 font-mono text-brand-blue">{{ u.username }}</td>
+              <td class="px-4 py-3">
+                <span [class]="'px-2 py-0.5 rounded text-[11px] font-bold ' +
+                  (u.rol==='admin' ? 'bg-brand-blue text-white' : 'bg-gray-100 text-gray-600')">
+                  {{ u.rol === 'admin'? 'Admin': (u.rol === 'bodega'? 'Bodega': (u.rol === 'calidad'? 'Calidad': 'Operario')) }}
+                </span>
+              </td>
+              <td class="px-4 py-3 font-mono text-sm">{{ u.maquinas_asignadas || '—' }}</td>
+              <td class="px-4 py-3"><button (click)="toggleActivo(u)" [class]="'px-2 py-0.5 rounded text-[11px] font-bold '+ (u.activo==='SI'? 'bg-emerald-100 text-emerald-700': 'bg-red-100 text-brand-red')">{{ u.activo === 'SI'? 'Activo': 'Inactivo'}}</button></td>
+              <td class="px-4 py-3 flex gap-1.5">
+                <button (click)="abrirEditar(u)" class="px-3 py-1 bg-blue-50 text-brand-blue border border-blue-200 text-[11px] font-bold rounded hover:bg-blue-100">Editar</button>
+                <label class="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-bold rounded hover:bg-emerald-100 cursor-pointer">
+                   Firma
+                  <input type="file" accept="image/*" class="hidden" (change)="subirFirma(u, $event)">
+                </label>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="usuarios.length === 0" class="text-center py-8 text-gray-400 text-sm">No hay usuarios registrados aún.</div>
+      </div>
+    </div>
+
+  </div>
+  </div>
+</div>

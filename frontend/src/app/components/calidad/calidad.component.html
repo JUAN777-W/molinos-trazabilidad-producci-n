@@ -1,0 +1,265 @@
+<div class="min-h-screen bg-gray-100">
+
+  <!-- HEADER -->
+  <header class="no-print bg-brand-blue text-white px-6 py-4 flex justify-between items-center shadow-sm border-b-4 border-brand-red">
+    <div class="flex items-center gap-3">
+      <img src="assets/logo.png" alt="Molinos del Atlántico" class="h-10 w-auto brightness-0 invert">
+      <div>
+        <h1 class="text-lg font-black">Molinos del Atlántico — Muestreo de Calidad</h1>
+        <p class="text-xs text-blue-100">Bienvenida, {{ nombreUsuario }}</p>
+      </div>
+    </div>
+    <button (click)="logout()" class="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/30 text-white text-xs font-bold uppercase tracking-wide rounded">
+       Cerrar Sesión
+    </button>
+  </header>
+
+  <div class="flex items-start">
+
+    <!-- Sidebar del panel admin — para que al entrar aquí no se sienta como
+         "salir" a otra página aparte. Solo visible para admin. -->
+    <aside *ngIf="esAdmin" class="no-print w-20 flex-shrink-0 bg-white border-r border-gray-200 min-h-screen py-3">
+      <nav class="flex flex-col items-center gap-1 px-1">
+        <a routerLink="/admin" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">dashboard</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Dashboard</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'monitor'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">monitor</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Monitor</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'informes'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">assessment</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Informes</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'mantenimiento'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">build</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Mtto.</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'crear-salida'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">warehouse</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Bodega</span>
+        </a>
+        <a routerLink="/admin" [queryParams]="{tab:'usuarios'}" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">group</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Usuarios</span>
+        </a>
+        <div class="w-8 h-px bg-gray-200 my-2"></div>
+        <a routerLink="/calidad" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">biotech</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Calidad</span>
+        </a>
+        <a routerLink="/mermas" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">trending_down</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Mermas</span>
+        </a>
+        <a routerLink="/oee" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">speed</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">OEE</span>
+        </a>
+        <a routerLink="/trazabilidad" routerLinkActive="!bg-brand-blue !text-white" class="w-16 h-14 flex flex-col items-center justify-center rounded transition-colors text-gray-500 hover:bg-brand-blue-50 hover:text-brand-blue">
+          <span class="material-symbols-outlined text-[22px]">route</span>
+          <span class="text-[9px] font-bold mt-0.5 tracking-tight">Traza.</span>
+        </a>
+      </nav>
+    </aside>
+
+  <div class="flex-1 p-6 max-w-6xl mx-auto">
+
+    <div class="mb-6 no-print">
+      <h2 class="text-base font-black text-gray-800">Muestreo de Calidad</h2>
+      <p class="text-xs text-gray-400">
+        Elige una fecha y una referencia — el sistema junta todos los pesos que los operarios ya registraron
+        ese día (en ambos turnos, cualquier máquina) y elige al azar la cantidad que pidas.
+      </p>
+    </div>
+
+    <!-- Generar muestreo nuevo -->
+    <div class="bg-white rounded-xl shadow-md p-5 mb-6 no-print">
+      <h3 class="text-sm font-black text-gray-800 mb-4">Generar Nuevo Muestreo</h3>
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div>
+          <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Fecha</label>
+          <input type="date" [(ngModel)]="formMuestreo.fecha" (change)="cargarReferenciasDisponibles()"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Referencia</label>
+          <select [(ngModel)]="formMuestreo.referencia" [disabled]="cargandoReferencias"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100">
+            <option value="">-- Seleccionar --</option>
+            <option *ngFor="let r of referenciasDisponibles" [value]="r.codigo">{{ r.descripcion }}</option>
+          </select>
+          <p *ngIf="!cargandoReferencias && referenciasDisponibles.length === 0" class="text-[10px] text-amber-600 mt-1">
+            Sin datos de Control de Peso para esa fecha todavía.
+          </p>
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1 min-h-[1.6rem] leading-tight">Cantidad de Muestras</label>
+          <input type="number" [(ngModel)]="formMuestreo.cantidad_solicitada" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <button (click)="generarMuestreo()" [disabled]="generandoMuestreo"
+          class="px-4 py-2.5 bg-brand-blue hover:bg-brand-blue-dark disabled:opacity-50 text-white font-bold rounded-lg text-xs shadow">
+          {{ generandoMuestreo ? 'Generando...': 'Generar Muestreo Aleatorio'}}
+        </button>
+      </div>
+      <p *ngIf="errorMuestreo" class="text-xs text-brand-red font-bold mt-3">{{ errorMuestreo }}</p>
+    </div>
+
+    <!-- Listado de muestreos ya generados -->
+    <div class="bg-white rounded-xl shadow-md p-5 no-print">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-sm font-black text-gray-800">Muestreos Generados</h3>
+        <button (click)="cargarMuestreos()" class="px-3 py-1.5 bg-gray-100 text-gray-600 border border-gray-300 rounded-lg text-[10px] font-bold hover:bg-gray-200">
+           Actualizar
+        </button>
+      </div>
+
+      <table class="w-full text-xs">
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <th class="px-3 py-2 text-left font-bold text-gray-500">FECHA</th>
+            <th class="px-3 py-2 text-left font-bold text-gray-500">REFERENCIA</th>
+            <th class="px-3 py-2 text-center font-bold text-gray-500">SOLICITADAS</th>
+            <th class="px-3 py-2 text-center font-bold text-gray-500">ENCONTRADAS</th>
+            <th class="px-3 py-2 text-center font-bold text-gray-500">% CUMPLE</th>
+            <th class="px-3 py-2 text-left font-bold text-gray-500">GENERADO POR</th>
+            <th class="px-3 py-2 text-center font-bold text-gray-500">ACCIÓN</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let m of muestreos" class="border-b border-gray-100">
+            <td class="px-3 py-2 font-bold">{{ m.fecha }}</td>
+            <td class="px-3 py-2">{{ m.referencia }}</td>
+            <td class="px-3 py-2 text-center">{{ m.cantidad_solicitada }}</td>
+            <td class="px-3 py-2 text-center">{{ m.cantidad_encontrada }}</td>
+            <td class="px-3 py-2 text-center">
+              <span [class]="'font-bold px-2 py-0.5 rounded-full text-[10px] ' + (m.pct_cumple >= 95 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700')">
+                {{ m.pct_cumple }}%
+              </span>
+            </td>
+            <td class="px-3 py-2 text-gray-500">{{ m.nombre_generado_por }}</td>
+            <td class="px-3 py-2 text-center">
+              <button (click)="verMuestreo(m.id)" class="px-3 py-1 bg-brand-blue hover:bg-brand-blue-dark text-white text-[10px] font-bold rounded-lg">
+                 Ver
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div *ngIf="muestreos.length === 0" class="text-center py-10 text-gray-400 text-xs">
+        Todavía no se ha generado ningún muestreo.
+      </div>
+    </div>
+
+    <!-- Detalle de un muestreo — formato formal, imprimible -->
+    <div *ngIf="muestreoDetalle" class="mt-6 max-w-5xl mx-auto bg-white p-6 shadow-xl border border-gray-300 rounded-lg">
+
+      <div class="flex justify-between mb-2 no-print">
+        <button (click)="muestreoDetalle = null" class="px-4 py-1.5 bg-gray-100 text-gray-600 border border-gray-300 font-bold rounded-lg text-xs hover:bg-gray-200">
+          ✕ Cerrar
+        </button>
+        <button (click)="generarPDF()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs shadow">
+           Generar PDF
+        </button>
+      </div>
+
+      <!-- CABECERA -->
+      <table class="w-full table-print mb-4 text-xs font-bold">
+        <tr>
+          <td class="w-1/4" rowspan="2">
+            <div class="flex flex-col items-center">
+              <img src="assets/logo.png" alt="Molinos del Atlántico" class="h-12 w-auto mb-1">
+              <span class="text-base font-black text-brand-blue">La Nieve</span>
+            </div>
+          </td>
+          <td class="w-2/4 text-sm text-center font-black text-brand-blue" rowspan="2">
+            MUESTREO DE CALIDAD<br>CONTROL DE PESO — ÁREA DE EMPAQUE AL DETAL
+          </td>
+          <td class="w-1/4 text-center border-b border-gray-800 bg-gray-50">MUESTREO #{{ muestreoDetalle.id }}</td>
+        </tr>
+        <tr><td class="text-center bg-gray-50">{{ muestreoDetalle.fecha }}</td></tr>
+      </table>
+
+      <!-- DATOS DEL MUESTREO -->
+      <table class="w-full table-print text-xs font-bold uppercase mb-4">
+        <tr>
+          <td class="w-1/2 p-2 border border-gray-800 bg-white">
+            <div class="flex items-center gap-2">
+              <span class="whitespace-nowrap">FECHA AUDITADA:</span>
+              <span class="flex-1 font-black text-gray-800 bg-gray-100 px-2 py-1 rounded">{{ muestreoDetalle.fecha }}</span>
+            </div>
+          </td>
+          <td class="w-1/2 p-2 border border-gray-800 bg-white">
+            <div class="flex items-center gap-2">
+              <span class="whitespace-nowrap">MUESTRAS:</span>
+              <span class="flex-1 font-black text-brand-blue bg-gray-100 px-2 py-1 rounded">
+                {{ muestreoDetalle.cantidad_encontrada }} de {{ muestreoDetalle.cantidad_solicitada }} solicitadas
+              </span>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" class="p-2 border border-gray-800 bg-white">
+            <div class="flex items-center gap-2">
+              <span class="whitespace-nowrap">REFERENCIA:</span>
+              <span class="flex-1 font-black text-brand-blue bg-gray-100 px-2 py-1 rounded text-[11px]">{{ muestreoDetalle.referencia }}</span>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="2" class="p-2 border border-gray-800 bg-white">
+            <div class="flex items-center gap-2">
+              <span class="whitespace-nowrap">GENERADO POR:</span>
+              <span class="flex-1 font-black text-gray-800 bg-gray-100 px-2 py-1 rounded normal-case">{{ muestreoDetalle.nombre_generado_por }}</span>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <div class="text-center font-bold text-xs bg-gray-100 border-x border-t border-gray-800 py-1">MUESTRAS ELEGIDAS AL AZAR</div>
+
+      <!-- TABLA -->
+      <table class="w-full table-print text-xs mb-4">
+        <thead>
+          <tr class="bg-gray-50 text-[10px] font-bold">
+            <th class="w-[6%]">#</th>
+            <th class="w-[12%]">TURNO</th>
+            <th class="w-[14%]">MÁQUINA</th>
+            <th class="w-[14%]">HORA</th>
+            <th class="w-[12%]">PESO</th>
+            <th class="w-[12%]">CUMPLE</th>
+            <th class="w-[30%]">OBSERVACIONES DE CALIDAD</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let it of muestreoDetalle.items">
+            <td class="text-center text-gray-400">{{ it.numero_muestra }}</td>
+            <td class="text-center">{{ it.turno_origen }}</td>
+            <td class="text-center font-mono text-brand-blue font-bold">{{ it.maquina_origen }}</td>
+            <td class="text-center">{{ it.hora_origen }}</td>
+            <td class="text-center font-black">{{ it.valor_peso }}</td>
+            <td class="text-center">
+              <span [class]="'font-bold px-2 py-0.5 rounded-full text-[10px] ' + (it.cumple === 'SI' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700')">
+                {{ it.cumple }}
+              </span>
+            </td>
+            <td class="p-0">
+              <input type="text" [(ngModel)]="it.observaciones_calidad" (change)="guardarObservacionMuestra(it)"
+                placeholder="Escribe aquí..." class="w-full border-0 px-2 py-1 text-[11px]">
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- FIRMA -->
+      <div class="mt-5 pt-4 border-t border-gray-400 flex items-center gap-2 text-xs">
+        <span class="font-bold whitespace-nowrap">FIRMA INGENIERA DE CALIDAD:</span>
+        <div class="flex-1 border-b border-gray-500 h-8"></div>
+      </div>
+
+    </div>
+
+  </div>
+  </div>
+</div>

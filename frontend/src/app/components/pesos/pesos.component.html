@@ -1,0 +1,177 @@
+<div class="max-w-5xl mx-auto p-3 sm:p-6 my-2 flex flex-col gap-4">
+
+  <!-- AVISO: modo solo lectura -->
+  <div *ngIf="soloLectura" class="no-print flex items-center gap-2 bg-white shadow-card rounded-xl px-4 py-3">
+    <span class="flex-1 text-xs font-mono font-bold text-slate-600">Modo solo lectura — viendo un registro ya guardado.</span>
+    <button (click)="generarPDF()" class="px-5 py-2.5 min-h-[48px] flex items-center gap-1.5 bg-brand-green hover:bg-brand-green-dark text-white font-bold rounded-full text-xs shadow">
+      <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> Generar PDF
+    </button>
+  </div>
+
+  <!-- BOTONES -->
+  <div *ngIf="!soloLectura" class="no-print bg-white shadow-card rounded-xl px-4 py-3 flex justify-between items-center flex-wrap gap-2">
+    <button (click)="limpiar()"
+      class="px-5 py-2.5 min-h-[48px] flex items-center gap-1.5 bg-white text-brand-red border-2 border-brand-red font-bold rounded-full text-xs hover:bg-brand-red-50">
+      <span class="material-symbols-outlined text-[18px]">restart_alt</span> Limpiar Formulario
+    </button>
+    <div class="flex gap-2 items-center">
+      <span *ngIf="toast" class="text-xs font-mono font-bold text-brand-green bg-brand-green-50 border border-brand-green/30 px-3 py-1.5 rounded-lg">
+        {{ toast }}
+      </span>
+    </div>
+  </div>
+
+  <div [class.pointer-events-none]="soloLectura" [class.opacity-95]="soloLectura">
+
+  <!-- ALERTA DE CONSISTENCIA — visible en pantalla, no un popup del navegador -->
+  <div *ngIf="alertaConsistencia" class="no-print mb-3 rounded-lg p-3 flex items-start gap-2 border-2"
+    [class]="alertaEsError ? 'bg-red-50 border-brand-red' : 'bg-amber-50 border-brand-gold'">
+    <div class="flex-1">
+      <div class="text-sm font-black mb-1" [class]="alertaEsError ? 'text-brand-red' : 'text-brand-gold-dark'">
+        {{ alertaEsError ? 'No se guardó — revisa lo siguiente' : 'Aviso' }}
+      </div>
+      <div class="text-xs" [class]="alertaEsError ? 'text-red-800' : 'text-amber-800'">{{ alertaConsistencia }}</div>
+      <ul *ngIf="conflictosConsistencia.length" class="text-[11px] text-red-900 list-disc list-inside mt-1">
+        <li *ngFor="let c of conflictosConsistencia">
+          <b>{{ c.formato }}</b> — máquina {{ c.maquina }}, operario {{ c.operario }}: registrado con <b>Turno {{ c.turno }}</b>
+        </li>
+      </ul>
+      <ul *ngIf="camposFaltantes.length" class="text-[11px] text-red-900 list-disc list-inside mt-1">
+        <li *ngFor="let cf of camposFaltantes">{{ cf }}</li>
+      </ul>
+    </div>
+    <button (click)="alertaConsistencia=null" class="no-print text-lg leading-none font-black opacity-60 hover:opacity-100"
+      [class]="alertaEsError ? 'text-brand-red' : 'text-brand-gold-dark'">✕</button>
+  </div>
+
+  <!-- CABECERA -->
+  <div class="bg-white shadow-card rounded-xl overflow-hidden">
+    <table class="w-full table-print text-xs font-bold" style="border:none;">
+      <tr>
+        <td class="w-1/4 border-none" rowspan="2">
+          <div class="flex flex-col items-center py-3">
+            <img src="assets/logo.png" alt="Molinos del Atlántico" class="h-12 w-auto mb-1">
+            <span class="text-base font-black text-brand-blue">La Nieve</span>
+          </div>
+        </td>
+        <td class="w-2/4 text-sm sm:text-base text-center font-black text-brand-blue border-none uppercase" rowspan="2">
+          CONTROL DE PESO EMPACADORAS<br>ÁREA DE EMPAQUE AL DETAL
+        </td>
+        <td class="w-1/4 text-right pr-4 border-none">
+          <div class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wide">Versión</div>
+          <div class="font-mono text-sm text-slate-700">3</div>
+        </td>
+      </tr>
+      <tr><td class="text-right pr-4 border-none">
+        <div class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wide">Fecha doc.</div>
+        <div class="font-mono text-sm text-slate-700">2024-09-23</div>
+      </td></tr>
+    </table>
+  </div>
+
+  <!-- Selector de planilla — solo aparece cuando la máquina es pareja (2 planillas) -->
+  <div *ngIf="planillas.length > 1" class="no-print flex gap-2">
+    <button *ngFor="let p of planillas; let idx = index" (click)="cambiarPlanillaActiva(idx)"
+      [class]="'flex-1 py-3 min-h-[48px] rounded-lg text-sm font-black border-2 transition-colors ' +
+      (planillaActivaIdx === idx ? 'bg-brand-blue text-white border-brand-blue' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50')">
+      Planilla {{ idx + 1 }} — {{ p.maquina || '(máquina)' }}
+    </button>
+  </div>
+
+  <!-- DATOS CABECERA (siempre de solo lectura — vienen de Bobinas, no se editan aquí) -->
+  <div class="bg-white shadow-card rounded-xl p-4 flex flex-col gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div>
+        <div class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Fecha</div>
+        <div class="min-h-[48px] flex items-center px-3 rounded-lg border border-slate-200 bg-slate-50 font-mono font-bold text-slate-700">{{ fecha || '—' }}</div>
+      </div>
+      <div>
+        <div class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Turno</div>
+        <div class="min-h-[48px] flex items-center px-3 rounded-lg border border-slate-200 bg-slate-50 font-bold text-slate-700">{{ turno ? turnoLabel(turno) : '—' }}</div>
+      </div>
+      <div>
+        <div class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Máquina</div>
+        <div class="min-h-[48px] flex items-center px-3 rounded-lg border border-slate-200 bg-slate-50 font-bold text-brand-blue">{{ maquina || '—' }}</div>
+      </div>
+    </div>
+    <div>
+      <div class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wide mb-1">Referencia</div>
+      <div class="min-h-[48px] flex items-center px-3 rounded-lg border border-slate-200 bg-slate-50 font-bold text-brand-blue text-sm">{{ referencia ? referenciaLabel(referencia) : '—' }}</div>
+    </div>
+  </div>
+
+  <!-- TABLA -->
+  <div class="bg-white shadow-card rounded-xl overflow-hidden">
+  <div class="text-center font-mono font-bold text-xs bg-slate-100 text-slate-500 uppercase tracking-wide py-2">Control de Peso</div>
+  <div class="no-print text-center text-[11px] text-brand-blue font-bold py-1.5 bg-brand-blue-50">↔ Desliza para ver todas las muestras</div>
+  <div class="overflow-x-auto">
+  <table class="w-full table-print text-xs" style="border:none;">
+    <thead>
+      <tr class="bg-slate-100 text-slate-500 text-[10px] font-mono font-bold uppercase">
+        <th class="min-w-[70px] columna-fija bg-slate-100">HORA</th>
+        <th *ngFor="let idx of muestraIndices" class="min-w-[52px]">{{ idx + 1 }}</th>
+        <th class="min-w-[140px]">OBSERVACIONES</th>
+      </tr>
+    </thead>
+    <tbody>
+      <ng-container *ngFor="let f of filas">
+      <tr>
+        <td class="font-mono font-bold bg-slate-50 text-[11px] columna-fija">{{ f.hora }}</td>
+        <td class="muestra-cell" *ngFor="let idx of muestraIndices">
+          <input type="number" inputmode="decimal" [ngModel]="getMuestra(f, idx)" (ngModelChange)="onMuestraChange(f, idx, $event)" [class]="'peso-input ' + f._clases[idx]" placeholder="-">
+        </td>
+        <td><input type="text" [(ngModel)]="f.observaciones"></td>
+      </tr>
+      <tr *ngIf="filaAtipica(f) && !f._confirmadoAtipico" class="bg-red-50">
+        <td [attr.colspan]="muestraIndices.length + 2" class="px-3 py-1.5 text-[10px] text-brand-red font-bold">
+           Peso fuera del rango normal (500-508 g o 1000-1015 g) — revisa si escribiste bien el número.
+          <button (click)="confirmarAtipico(f)" class="no-print ml-2 px-2 py-0.5 bg-white border border-brand-red rounded text-brand-red font-bold hover:bg-red-100">
+             Es correcto, no es error
+          </button>
+        </td>
+      </tr>
+      </ng-container>
+    </tbody>
+  </table>
+  </div>
+  </div>
+
+  <!-- TABLA REFERENCIA -->
+  <div class="bg-white shadow-card rounded-xl overflow-hidden">
+  <table class="table-print w-full text-[10px] uppercase font-bold" style="border:none;">
+    <tr class="bg-brand-blue-50"><td colspan="3" class="font-black text-brand-blue">MÍNIMOS Y MÁXIMOS UNIDADES</td></tr>
+    <tr class="bg-slate-100 font-mono text-slate-500"><td>CONTENIDO</td><td>MÍNIMO</td><td>MÁXIMO</td></tr>
+    <tr><td>500g</td><td class="text-brand-green font-black">500g</td><td class="text-brand-green font-black">508g</td></tr>
+    <tr><td>1000g</td><td class="text-brand-green font-black">1000g</td><td class="text-brand-green font-black">1015g</td></tr>
+  </table>
+  </div>
+
+  <!-- FIRMA -->
+  <div class="bg-white shadow-card rounded-xl p-4">
+    <div class="max-w-xs">
+      <div class="text-xs font-mono font-bold uppercase tracking-wide text-slate-500 mb-1">Firma del Operario:</div>
+
+      <!-- Firma cargada desde la cuenta del operario -->
+      <div *ngIf="firmaAutomatica" class="h-20 border-2 border-brand-green/40 rounded-lg flex items-center justify-center bg-brand-green-50">
+        <img [src]="firma_data" alt="Firma del operario" class="max-h-full max-w-full object-contain">
+      </div>
+      <div *ngIf="firmaAutomatica" class="text-[9px] text-brand-green font-bold mt-0.5 no-print">
+         Firma registrada de tu cuenta
+      </div>
+
+      <!-- Espacio reservado: aún no hay firma cargada para este usuario -->
+      <div *ngIf="!firmaAutomatica && !cargandoFirma" class="h-20 border-2 border-dashed border-brand-gold/50 rounded-lg flex items-center justify-center bg-brand-gold-50">
+        <span class="text-[10px] text-slate-500 italic px-2 text-center">La firma aparecerá aquí una vez esté registrada</span>
+      </div>
+      <div *ngIf="!firmaAutomatica && !cargandoFirma" class="text-[9px] text-brand-gold-dark font-bold mt-0.5 no-print">
+         Todavía no tienes una firma registrada — pide al administrador que suba tu firma escaneada.
+      </div>
+
+      <div *ngIf="cargandoFirma" class="h-20 border-2 border-slate-200 rounded-lg flex items-center justify-center bg-slate-50">
+        <span class="text-[10px] text-slate-400">Buscando tu firma registrada...</span>
+      </div>
+    </div>
+  </div>
+
+  </div> <!-- fin del envoltorio de solo lectura -->
+</div>
